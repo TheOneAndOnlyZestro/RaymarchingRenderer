@@ -13,7 +13,7 @@
 #include "ray_FFT.cuh"
 #include <cuda_runtime.h>
 
-void launchFragment(cudaSurfaceObject_t surf, float time, unsigned int width, unsigned int height);
+void launchFragment(cudaSurfaceObject_t surf, float time, unsigned int width, unsigned int height,const ray::vec3& loc,const ray::vec3& rot, const float n);
 
 #endif
 

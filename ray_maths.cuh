@@ -10,9 +10,12 @@
 #endif
 //This section deals with vec3 structures and there corresponding functions
 namespace ray {
+
+    __device__ __host__
     struct vec3 {
         union {
             struct {float x, y, z; };
+            struct {float v[3]; };
             struct { float r, g, b; };
         };
 
@@ -118,13 +121,13 @@ namespace ray {
         return ray::vec3(v1.x * v2.x, v1.y * v2.y, v1.z * v2.z);
     }
 
-    __device__ __host__ inline ray::vec3 operator^(const ray::vec3& v1, const int power) {
+    __device__ __host__ inline ray::vec3 operator^(const ray::vec3& v1, const float power) {
         //get spherical representation
         float ro = length(v1);
         float theta = atan2f(v1.y, v1.x);
         float phi = acosf(v1.z / (ro+(float)EPSILON));
 
-        ro = powf(ro, (float)power);
+        ro = powf(ro, power);
         theta = theta * power;
         phi = phi * power;
 

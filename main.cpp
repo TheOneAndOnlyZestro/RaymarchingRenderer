@@ -68,6 +68,21 @@ int main() {
         return -1;
     }
 
+    //Setup IMGUI
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+
+    ImGui::StyleColorsDark();
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    //initialize imgui for glfw and opengl
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330 core");
+
     cudaGLSetGLDevice(0);
 
     //Setup both shaders
@@ -117,13 +132,24 @@ int main() {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    double currentTime = glfwGetTime();
-    double lastTime = currentTime;
+    ray::vec3 loc;
+    ray::vec3 rot;
+    float n = 8.f;
     while (!glfwWindowShouldClose(window)) {
-        double currentFrameTime = glfwGetTime();
-        double deltaTime = currentFrameTime - lastTime;
-        lastTime = currentFrameTime;
+        //Imgui new frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
 
+        //GUI Vars
+        //IMGUI PLAYGROUND
+        {
+            ImGui::Begin("Control Panel");
+            ImGui::DragFloat3("Position",loc.v,0.2f,-5.0f,5.0f);
+            ImGui::DragFloat3("Rotation",rot.v,0.2f,-360.0f,360.0f);
+            ImGui::DragFloat("Exp",&n,.02f, 0,100.f);
+            ImGui::End();
+        }
         //Game Loop
         glClearColor(0.0f,0.2f,0.5f,1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -141,7 +167,7 @@ int main() {
         cudaCreateSurfaceObject(&surf, &resourceDesc);
 
 
-        launchFragment(surf, glfwGetTime() * 0.1f,width, height);
+        launchFragment(surf, glfwGetTime() * 0.1f,width, height,loc,rot,n);
 
         cudaDestroySurfaceObject(surf);
         cudaGraphicsUnmapResources(1,&cudaRes, 0);
@@ -150,11 +176,20 @@ int main() {
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
+        //Render everything
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         glfwSwapBuffers(window);
         // Poll for and process events
         glfwPollEvents();
     }
 
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
 }

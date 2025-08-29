@@ -56,7 +56,7 @@ __device__ float scene1(const ray::vec3& p) {
 }
 
 
-__device__ ray::vec3 mandelbulbSDF(const ray::vec3& p, const int N) {
+__device__ ray::vec3 mandelbulbSDF(const ray::vec3& p, const int N, const float pw) {
 
     ray::vec3 zold(0.f,0.f,0.f);
         ray::vec3 znew(0.f,0.f,0.f);
@@ -67,21 +67,22 @@ __device__ ray::vec3 mandelbulbSDF(const ray::vec3& p, const int N) {
         if (ray::length(zold) > 8.f) {
             break;
         }
-        znew = (zold ^ 8) + p;
-        dr = (8 * powf(length(zold), 7) * dr) + 1.f;
+        znew = (zold ^ pw) + p;
+        dr = (pw * powf(length(zold), pw-1.f) * dr) + 1.f;
         zold = znew;
     }
 
     float d = 0.5f * (ray::length(znew) * logf(ray::length(znew)) )/(dr+EPSILON);
     return ray::vec3(d, length(zold) - floorf(length(zold)),0.f);
 }
-__device__ ray::vec3 scene3(const ray::vec3& p, float time) {
-    return mandelbulbSDF(ray::rotate( ray::rotate(p - ray::vec3(0.f,0.f,-3.3f), 0, PI/2.f), 0, time) , 8);
-    //return cubeSDF(ray::rotate(p - ray::vec3(0.f,0.f,-1.f),1,PI/4.f), ray::vec3(),ray::vec3(1.f,1.f,1.f));
+__device__ ray::vec3 scene3(const ray::vec3& p, const ray::vec3& loc, const ray::vec3& rot, const float n) {
+    return mandelbulbSDF( ray::rotate(ray::rotate(ray::rotate( ((p - ray::vec3(0.f,0.f,-3.3f)) -loc),0,rot.x * (PI/180.f)),1,rot.y * (PI/180.f)),2,rot.z * (PI/180.f))   ,
+        8,n);
+
 }
 
 __global__
-void FragmentKernel(cudaSurfaceObject_t surf, float time, unsigned int width, unsigned int height) {
+void FragmentKernel(cudaSurfaceObject_t surf, float time, unsigned int width, unsigned int height,const ray::vec3 loc,const ray::vec3 rot, const float n) {
     const unsigned int x = threadIdx.x + blockIdx.x * blockDim.x;
     const unsigned int y = threadIdx.y + blockIdx.y * blockDim.y;
 
@@ -106,7 +107,7 @@ void FragmentKernel(cudaSurfaceObject_t surf, float time, unsigned int width, un
         p = ro + (rd * t);
 
         //Check SDF
-        ray::vec3 o =  scene3(p,time);
+        ray::vec3 o =  scene3(p,loc,rot,n);
         d = o.x;
         vy = o.y;
         //March by this unit
@@ -125,9 +126,9 @@ void FragmentKernel(cudaSurfaceObject_t surf, float time, unsigned int width, un
         mask =1.f;
         //we hit a surface, calculate its normal
         ray::vec3 normal(
-            scene3(p + ray::vec3(epsilon,0.0f,0.0f),time).x - scene3(p - ray::vec3(epsilon,0.0f,0.0f),time).x,
-           scene3(p + ray::vec3(0.0f,epsilon,0.0f),time).x - scene3(p - ray::vec3(0.0f,epsilon,0.0f),time).x,
-           scene3(p + ray::vec3(0.0f,0.0f,epsilon),time).x - scene3(p - ray::vec3(0.0f,0.0f,epsilon),time).x);
+            scene3(p + ray::vec3(epsilon,0.0f,0.0f),loc,rot,n).x - scene3(p - ray::vec3(epsilon,0.0f,0.0f),loc,rot,n).x,
+           scene3(p + ray::vec3(0.0f,epsilon,0.0f),loc,rot,n).x - scene3(p - ray::vec3(0.0f,epsilon,0.0f),loc,rot,n).x,
+           scene3(p + ray::vec3(0.0f,0.0f,epsilon),loc,rot,n).x - scene3(p - ray::vec3(0.0f,0.0f,epsilon),loc,rot,n).x);
         normal = ray::normalize(normal);
 
         //calculate dot product between normal and a light source
@@ -210,10 +211,10 @@ std::string getNextRenderFileName(const std::string& directoryName) {
 //     stbi_write_jpg(getNextRenderFileName("../Renders").c_str(),width , height, 3, image, 300);
 // }
 
-void launchFragment(cudaSurfaceObject_t surf,float time, unsigned int width, unsigned int height) {
+void launchFragment(cudaSurfaceObject_t surf,float time, unsigned int width, unsigned int height,const ray::vec3& loc, const ray::vec3& rot, const float n) {
     dim3 ThreadsPerBlock(16, 16);
     dim3 GridDim((width + 15) / 16, (height + 15) / 16 );
 
-    FragmentKernel<<<GridDim, ThreadsPerBlock>>>(surf,time, width, height);
+    FragmentKernel<<<GridDim, ThreadsPerBlock>>>(surf,time, width, height,loc,rot,n);
     cudaDeviceSynchronize();
 }
