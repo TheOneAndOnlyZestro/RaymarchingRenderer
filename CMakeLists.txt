@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(THIRDPARTY_DIR "${CMAKE_SOURCE_DIR}/Vendor")
 set(GLFW_ROOT "${THIRDPARTY_DIR}/GLFW")
 set(GLEW_ROOT "${THIRDPARTY_DIR}/GLEW")
+set(IMGUI_ROOT "${THIRDPARTY_DIR}/ImGui")
 
 find_package(CUDAToolkit REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -32,10 +33,15 @@ add_executable(RaymarchingCUDA
         ray_maths.cuh
         ray_FFT.cuh
         stbi_impl.cpp
+        ${IMGUI_ROOT}/src/imgui.cpp
+        ${IMGUI_ROOT}/src/imgui_impl_glfw.cpp
+        ${IMGUI_ROOT}/src/imgui_impl_opengl3.cpp
         )
+
 
 target_include_directories(RaymarchingCUDA PRIVATE
         ${CUDAToolkit_INCLUDE_DIRS}
+        ${IMGUI_ROOT}/ImGui/include
 )
 
 target_link_libraries(RaymarchingCUDA PRIVATE
