@@ -2,7 +2,9 @@
 #include <GLFW/glfw3.h>
 #include <cuda_gl_interop.h>
 #include "fragment_kernel_api.h"
-
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 
 const float default_verts[] = {
     -1.f, -1.f, 0.f,    0.f,0.f,
