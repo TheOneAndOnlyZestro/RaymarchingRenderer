@@ -39,7 +39,9 @@
                 ${IMGUI_ROOT}/src/imgui_widgets.cpp
                 ${IMGUI_ROOT}/src/imgui_impl_glfw.cpp
                 ${IMGUI_ROOT}/src/imgui_impl_opengl3.cpp
-                )
+                Primitive.cu
+                Primitive.cuh
+        )
 
 
         target_include_directories(RaymarchingCUDA PRIVATE

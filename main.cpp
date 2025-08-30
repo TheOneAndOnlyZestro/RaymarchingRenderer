@@ -46,8 +46,8 @@ void main()
 }
 )glsl";
 
-const unsigned int width = 800;
-const unsigned int height = 800;
+const unsigned int width = 900;
+const unsigned int height = 900;
 int main() {
 
 
@@ -145,7 +145,7 @@ int main() {
         //IMGUI PLAYGROUND
         {
             ImGui::Begin("Control Panel");
-            ImGui::DragFloat3("Position",loc.v,0.2f,-5.0f,5.0f);
+            ImGui::DragFloat3("Position",loc.v,0.05f,-5.0f,5.0f);
             ImGui::DragFloat3("Rotation",rot.v,0.2f,-360.0f,360.0f);
             ImGui::DragFloat("Exp",&n,.02f, 0,100.f);
             ImGui::End();
