@@ -10,8 +10,7 @@ __device__ float sphereSDF(const ray::vec3& p, const ray::vec3& l, const float r
 __device__ float cubeSDF(const ray::vec3& p,
 const ray::vec3& l,
 const ray::vec3& r) {
-    ray::vec3 q(abs(p - l) - r);
-    return ray::length(ray::max(q, 0.f)) + min( ray::compMax(q) , 0.0);
+
 }
 
 __device__ float coneSDF(const ray::vec3& p, const ray::vec3& l,const float radius, const float height) {
