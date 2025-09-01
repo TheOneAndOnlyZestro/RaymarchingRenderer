@@ -132,9 +132,9 @@ int main() {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    ray::vec3 loc;
-    ray::vec3 rot;
-    float n = 8.f;
+    //Create a scene
+    std::shared_ptr<Primitive> Scene =
+        std::make_shared<Mandelbulb>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(1.f,1.f,1.f), 8, 8);
     while (!glfwWindowShouldClose(window)) {
         //Imgui new frame
         ImGui_ImplOpenGL3_NewFrame();
@@ -145,9 +145,9 @@ int main() {
         //IMGUI PLAYGROUND
         {
             ImGui::Begin("Control Panel");
-            ImGui::DragFloat3("Position",loc.v,0.05f,-5.0f,5.0f);
-            ImGui::DragFloat3("Rotation",rot.v,0.2f,-360.0f,360.0f);
-            ImGui::DragFloat("Exp",&n,.02f, 0,100.f);
+            ImGui::DragFloat3("Position",Scene->getLocRef()->v,0.05f,-5.0f,5.0f);
+            ImGui::DragFloat3("Rotation",Scene->getRotRef()->v,0.2f,-360.0f,360.0f);
+            ImGui::DragFloat("Exp",std::dynamic_pointer_cast<Mandelbulb>(Scene)->getExponentRef(),.02f, 0,100.f);
             ImGui::End();
         }
         //Game Loop
@@ -166,8 +166,7 @@ int main() {
         cudaSurfaceObject_t surf = 0;
         cudaCreateSurfaceObject(&surf, &resourceDesc);
 
-
-        launchFragment(surf, glfwGetTime() * 0.1f,width, height,loc,rot,n);
+        launchFragment(surf, width, height, glfwGetTime(), Scene.get());
 
         cudaDestroySurfaceObject(surf);
         cudaGraphicsUnmapResources(1,&cudaRes, 0);

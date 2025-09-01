@@ -5,13 +5,15 @@
 #ifndef RAYMARCHINGCUDA_RAY_MATHS_CUH
 #define RAYMARCHINGCUDA_RAY_MATHS_CUH
 
+#ifndef PI
+#define PI acos(-1.0)
+#endif
 #ifndef EPSILON
 #define EPSILON 1.e-6
 #endif
 //This section deals with vec3 structures and there corresponding functions
 namespace ray {
 
-    __device__ __host__
     struct vec3 {
         union {
             struct {float x, y, z; };
