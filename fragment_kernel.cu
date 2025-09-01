@@ -8,23 +8,19 @@ template <typename T>
 struct DevicePrimitive;
 template <>
 struct DevicePrimitive<Sphere> {
-    union {
-        struct {ray::vec3 loc,rot,scale; } cube;
-        struct {ray::vec3 loc,rot,scale; float radius; } sphere;
-        struct {ray::vec3 loc,rot,scale; unsigned int iterations; float exponent;} mandelbulb;
-    };
+    ray::vec3 loc,rot,scale; float radius;
     __device__ __host__
-    DevicePrimitive(const ray::vec3& loc,
-                const ray::vec3& rot,
-                const ray::vec3& scale,
-                const float radius) {
-        sphere.loc   = loc;
-        sphere.rot   = rot;
-        sphere.scale = scale;
-        sphere.radius = radius;
+    DevicePrimitive(const ray::vec3& _loc,
+                const ray::vec3& _rot,
+                const ray::vec3& _scale,
+                const float _radius) {
+        loc   = _loc;
+        rot   = _rot;
+        scale = _scale;
+        radius = _radius;
     }
     __device__ __host__ void SDF(const ray::vec3& p, size_t* size, float* out) const{
-        Primitive::SphereSDF(p, sphere.loc, sphere.rot, sphere.scale, sphere.radius, size,out);
+        Primitive::SphereSDF(p, loc, rot, scale, radius, size,out);
     }
     __device__ __host__ ray::vec3 Normal(const ray::vec3& p) const{
         float dxp,dxn,dyp,dyn,dzp,dzn;
@@ -44,21 +40,19 @@ struct DevicePrimitive<Sphere> {
 
 template <>
 struct DevicePrimitive<Cube> {
-    union {
-        struct {ray::vec3 loc,rot,scale; } cube;
-        struct {ray::vec3 loc,rot,scale; float radius; } sphere;
-        struct {ray::vec3 loc,rot,scale; unsigned int iterations; float exponent;} mandelbulb;
-    };
+
+    ray::vec3 loc,rot,scale;
+
     __device__ __host__
-    DevicePrimitive(const ray::vec3& loc,
-                const ray::vec3& rot,
-                const ray::vec3& scale) {
-        cube.loc   = loc;
-        cube.rot   = rot;
-        cube.scale = scale;
+    DevicePrimitive(const ray::vec3& _loc,
+                const ray::vec3& _rot,
+                const ray::vec3& _scale) {
+        loc   = _loc;
+        rot   = _rot;
+        scale = _scale;
     }
     __device__ __host__ void SDF(const ray::vec3& p, size_t* size, float* out) const{
-        Primitive::CubeSDF(p, cube.loc, cube.rot, cube.scale, size,out);
+        Primitive::CubeSDF(p, loc, rot, scale, size,out);
     }
 
     __device__ __host__ ray::vec3 Normal(const ray::vec3& p) const{
@@ -79,26 +73,24 @@ struct DevicePrimitive<Cube> {
 
 template <>
 struct DevicePrimitive<Mandelbulb> {
-    union {
-        struct {ray::vec3 loc,rot,scale; } cube;
-        struct {ray::vec3 loc,rot,scale; float radius; } sphere;
-        struct {ray::vec3 loc,rot,scale; unsigned int iterations; float exponent;} mandelbulb;
-    };
+
+    ray::vec3 loc,rot,scale; unsigned int iterations; float exponent;
+
     __device__ __host__
-    DevicePrimitive(const ray::vec3& loc,
-                const ray::vec3& rot,
-                const ray::vec3& scale,
-                const unsigned int iterations,
-                const float exponent) {
-        mandelbulb.loc   = loc;
-        mandelbulb.rot   = rot;
-        mandelbulb.scale = scale;
-        mandelbulb.iterations = iterations;
-        mandelbulb.exponent  = exponent;
+    DevicePrimitive(const ray::vec3& _loc,
+                const ray::vec3& _rot,
+                const ray::vec3& _scale,
+                const unsigned int _iterations,
+                const float _exponent) {
+        loc   = _loc;
+        rot   = _rot;
+        scale = _scale;
+        iterations = _iterations;
+        exponent  = _exponent;
     }
     __device__ __host__ void SDF(const ray::vec3& p, size_t* size, float* out) const{
-        Primitive::MandelbulbSDF(p, mandelbulb.loc, mandelbulb.rot, mandelbulb.scale,
-            mandelbulb.iterations, mandelbulb.exponent, size,out);
+        Primitive::MandelbulbSDF(p, loc, rot, scale,
+            iterations, exponent, size,out);
     }
     __device__ __host__ ray::vec3 Normal(const ray::vec3& p) const{
         float dxp,dxn,dyp,dyn,dzp,dzn;
