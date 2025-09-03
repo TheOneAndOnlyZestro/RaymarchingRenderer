@@ -56,7 +56,7 @@ void Primitive::setScale(const ray::vec3 &scale) {
 
 Primitive::~Primitive() {}
 
-void Primitive::CubeSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
+void Cube::CubeSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
     size_t *size, float *out) {
 
     if (size != nullptr) *size = 1;
@@ -64,13 +64,13 @@ void Primitive::CubeSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec
     out[0] = ray::length(ray::max(q, 0.f)) + min( ray::compMax(q) , 0.0);
 }
 
-void Primitive::SphereSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
+void Sphere::SphereSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
     const float radius, size_t *size, float *out) {
     if (size != nullptr) *size = 1;
     out[0]=ray::length(p-loc) - radius;
 }
 
-void Primitive::MandelbulbSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
+void Mandelbulb::MandelbulbSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
     const unsigned int iterations, const float exponent, size_t *size, float *out) {
     ray::vec3 pnew =
         ray::rotate(ray::rotate(ray::rotate( (p - loc),0,rot.x * (PI/180.f)),1,rot.y * (PI/180.f)),2,rot.z * (PI/180.f));

@@ -47,20 +47,9 @@ public:
     __device__ __host__
     virtual ~Primitive();
 
-    __device__ __host__
-    static void CubeSDF(const ray::vec3& p,
-    const ray::vec3& loc, const ray::vec3& rot, const ray::vec3& scale,
-    size_t* size, float* out);
 
-    __device__ __host__
-    static void SphereSDF(const ray::vec3& p,
-    const ray::vec3& loc, const ray::vec3& rot, const ray::vec3& scale, const float radius,
-    size_t* size, float* out);
 
-    __device__ __host__
-    static void MandelbulbSDF(const ray::vec3& p,
-    const ray::vec3& loc, const ray::vec3& rot, const ray::vec3& scale, const unsigned int iterations, const float exponent,
-    size_t* size, float* out);
+
 
 
 };
@@ -84,6 +73,11 @@ class Sphere : public Primitive {
     virtual void setRadius(const float _radius);
 
     __device__ __host__
+    static void SphereSDF(const ray::vec3& p,
+    const ray::vec3& loc, const ray::vec3& rot, const ray::vec3& scale, const float radius,
+    size_t* size, float* out);
+
+    __device__ __host__
     ~Sphere() override;
 };
 
@@ -94,6 +88,11 @@ public:
 
     __device__ __host__
     virtual PrimitiveType getType() const override;
+
+    __device__ __host__
+    static void CubeSDF(const ray::vec3& p,
+    const ray::vec3& loc, const ray::vec3& rot, const ray::vec3& scale,
+    size_t* size, float* out);
 
     __device__ __host__
     ~Cube() override;
@@ -125,6 +124,10 @@ public:
     __device__ __host__
     virtual void setExponent(const float _exponent);
 
+    __device__ __host__
+    static void MandelbulbSDF(const ray::vec3& p,
+    const ray::vec3& loc, const ray::vec3& rot, const ray::vec3& scale, const unsigned int iterations, const float exponent,
+    size_t* size, float* out);
 
     __device__ __host__
     ~Mandelbulb() override;

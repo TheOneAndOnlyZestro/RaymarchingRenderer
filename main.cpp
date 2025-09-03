@@ -135,6 +135,8 @@ int main() {
     //Create a scene
     std::shared_ptr<Primitive> Scene =
         std::make_shared<Mandelbulb>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(1.f,1.f,1.f), 8, 8);
+
+
     while (!glfwWindowShouldClose(window)) {
         //Imgui new frame
         ImGui_ImplOpenGL3_NewFrame();

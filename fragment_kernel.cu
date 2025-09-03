@@ -20,7 +20,7 @@ struct DevicePrimitive<Sphere> {
         radius = _radius;
     }
     __device__ __host__ void SDF(const ray::vec3& p, size_t* size, float* out) const{
-        Primitive::SphereSDF(p, loc, rot, scale, radius, size,out);
+        Sphere::SphereSDF(p, loc, rot, scale, radius, size,out);
     }
     __device__ __host__ ray::vec3 Normal(const ray::vec3& p) const{
         float dxp,dxn,dyp,dyn,dzp,dzn;
@@ -52,7 +52,7 @@ struct DevicePrimitive<Cube> {
         scale = _scale;
     }
     __device__ __host__ void SDF(const ray::vec3& p, size_t* size, float* out) const{
-        Primitive::CubeSDF(p, loc, rot, scale, size,out);
+        Cube::CubeSDF(p, loc, rot, scale, size,out);
     }
 
     __device__ __host__ ray::vec3 Normal(const ray::vec3& p) const{
@@ -89,7 +89,7 @@ struct DevicePrimitive<Mandelbulb> {
         exponent  = _exponent;
     }
     __device__ __host__ void SDF(const ray::vec3& p, size_t* size, float* out) const{
-        Primitive::MandelbulbSDF(p, loc, rot, scale,
+        Mandelbulb::MandelbulbSDF(p, loc, rot, scale,
             iterations, exponent, size,out);
     }
     __device__ __host__ ray::vec3 Normal(const ray::vec3& p) const{
