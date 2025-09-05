@@ -30,6 +30,21 @@ ray::vec3 Primitive::getScale() const {
     return scale;
 }
 
+bool Primitive::isOperator() const {
+    return getType() == PrimitiveType::UNION || getType() == PrimitiveType::INTERSECT;
+}
+
+void Primitive::getData(float *out, size_t *size) const{
+    if (size!=nullptr)
+        *size = 9;
+    if (out!=nullptr)
+        memcpy_s(out,sizeof(float) * 9 ,data, sizeof(float) * 9);
+}
+
+size_t Primitive::getSize() const {
+    return 9;
+}
+
 ray::vec3 * Primitive::getLocRef() {
     return &loc;
 }
@@ -64,14 +79,22 @@ void Cube::CubeSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &ro
     out[0] = ray::length(ray::max(q, 0.f)) + min( ray::compMax(q) , 0.0);
 }
 
+void Cube::CubeSDF(const float *input, size_t *size, float *out) {
+    CubeSDF(input, &input[3], &input[6], &input[9], size,out);
+}
+
 void Sphere::SphereSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
-    const float radius, size_t *size, float *out) {
+                       const float radius, size_t *size, float *out) {
     if (size != nullptr) *size = 1;
     out[0]=ray::length(p-loc) - radius;
 }
 
+void Sphere::SphereSDF(const float *input, size_t *size, float *out) {
+    SphereSDF(input, &input[3], &input[6], &input[9], input[12], size, out);
+}
+
 void Mandelbulb::MandelbulbSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
-    const unsigned int iterations, const float exponent, size_t *size, float *out) {
+                               const unsigned int iterations, const float exponent, size_t *size, float *out) {
     ray::vec3 pnew =
         ray::rotate(ray::rotate(ray::rotate( (p - loc),0,rot.x * (PI/180.f)),1,rot.y * (PI/180.f)),2,rot.z * (PI/180.f));
     ray::vec3 zold(0.f,0.f,0.f);
@@ -94,6 +117,10 @@ void Mandelbulb::MandelbulbSDF(const ray::vec3 &p, const ray::vec3 &loc, const r
     out[1] =  length(zold) - floorf(length(zold));
 }
 
+void Mandelbulb::MandelbulbSDF(const float *input, size_t *size, float *out) {
+    MandelbulbSDF(input, &input[3], &input[6], &input[9],(unsigned int)input[12], input[13], size, out);
+}
+
 //Sphere SDF
 Sphere::Sphere(const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale, const float _radius)
     :Primitive(_loc, _rot, _scale), radius(_radius) {}
@@ -102,6 +129,17 @@ Sphere::Sphere(const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_s
 PrimitiveType Sphere::getType() const {
     return PrimitiveType::SPHERE;
 }
+
+void Sphere::getData(float *out, size_t *size) const {
+    Primitive::getData(out, size);
+    out[*size] = radius;
+    *size += 1;
+}
+
+size_t Sphere::getSize() const {
+    return Primitive::getSize() + 1;
+}
+
 
 float Sphere::getRadius() const {
     return radius;
@@ -146,6 +184,17 @@ void Mandelbulb::setIterations(const unsigned int _iterations) {
     this->iterations = _iterations;
 }
 
+void Mandelbulb::getData(float *out, size_t *size) const {
+    Primitive::getData(out, size);
+    out[*size] = (float)iterations;
+    out[*size +1] = exponent;
+    *size += 2;
+}
+
+size_t Mandelbulb::getSize() const {
+    return Primitive::getSize() + 2;
+}
+
 PrimitiveType Mandelbulb::getType() const {
     return PrimitiveType::MANDELBROT;
 }
@@ -163,4 +212,50 @@ void Mandelbulb::setExponent(const float _exponent) {
 }
 
 Mandelbulb::~Mandelbulb() {}
+
+Union::Union(const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
+    : p1(_p1), p2(_p2),
+Primitive( (p1->getLoc() + p2->getLoc())/2.f,
+    ray::vec3(),ray::vec3(1.f,1.f,1.f)) {}
+
+PrimitiveType Union::getType() const {
+    return PrimitiveType::UNION;
+}
+
+std::shared_ptr<Primitive> Union::getP1() const {
+    return p1;
+}
+
+std::shared_ptr<Primitive> Union::getP2() const {
+    return p2;
+}
+
+void Union::UnionSDF(const float *input, size_t *size, float *out) {
+    if (size != nullptr)
+        *size = 1;
+    out[0] = min(input[0], input[1]);
+}
+
+Intersect::Intersect(const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
+: p1(_p1), p2(_p2),
+Primitive( (p1->getLoc() + p2->getLoc())/2.f,
+ray::vec3(),ray::vec3(1.f,1.f,1.f)) {}
+
+PrimitiveType Intersect::getType() const {
+    return PrimitiveType::INTERSECT;
+}
+
+std::shared_ptr<Primitive> Intersect::getP1() const {
+    return p1;
+}
+
+std::shared_ptr<Primitive> Intersect::getP2() const {
+    return p2;
+}
+
+void Intersect::IntersectSDF(const float *input, size_t *size, float *out) {
+    if (size != nullptr)
+        *size = 1;
+    out[0] = max(input[0], -input[1]);
+}
 

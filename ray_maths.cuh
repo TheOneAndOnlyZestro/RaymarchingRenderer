@@ -23,8 +23,13 @@ namespace ray {
 
         __device__ __host__
         vec3(float _x, float _y, float _z):x(_x), y(_y), z(_z){}
+        vec3(const float* d):x(d[0]), y(d[1]), z(d[2]) {}
         __device__ __host__
         vec3(): x(0.f), y(0.f), z(0.f){}
+
+        inline explicit operator float*() {
+            return v;
+        }
     };
 
     __device__ __host__

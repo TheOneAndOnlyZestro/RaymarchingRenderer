@@ -1,0 +1,12 @@
+//
+// Created by Andrew on 9/6/2025.
+//
+
+#ifndef RAYMARCHINGCUDA_RAY_FLATTEN_TO_CUDA_H
+#define RAYMARCHINGCUDA_RAY_FLATTEN_TO_CUDA_H
+
+namespace ray {
+    
+
+}
+#endif //RAYMARCHINGCUDA_RAY_FLATTEN_TO_CUDA_H

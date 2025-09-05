@@ -133,9 +133,13 @@ int main() {
     glEnableVertexAttribArray(1);
 
     //Create a scene
-    std::shared_ptr<Primitive> Scene =
+    std::shared_ptr<Primitive> Fractal =
         std::make_shared<Mandelbulb>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(1.f,1.f,1.f), 8, 8);
 
+    std::shared_ptr<Primitive> cube =
+        std::make_shared<Cube>(ray::vec3(0.f,0.f,-2.3f), ray::vec3(), ray::vec3(0.5f,0.2f,0.4f));
+
+    std::shared_ptr<Primitive> unionScene = std::make_shared<Union>(Fractal,cube);
 
     while (!glfwWindowShouldClose(window)) {
         //Imgui new frame
@@ -147,9 +151,9 @@ int main() {
         //IMGUI PLAYGROUND
         {
             ImGui::Begin("Control Panel");
-            ImGui::DragFloat3("Position",Scene->getLocRef()->v,0.05f,-5.0f,5.0f);
-            ImGui::DragFloat3("Rotation",Scene->getRotRef()->v,0.2f,-360.0f,360.0f);
-            ImGui::DragFloat("Exp",std::dynamic_pointer_cast<Mandelbulb>(Scene)->getExponentRef(),.02f, 0,100.f);
+            ImGui::DragFloat3("Position",Fractal->getLocRef()->v,0.05f,-5.0f,5.0f);
+            ImGui::DragFloat3("Rotation",Fractal->getRotRef()->v,0.2f,-360.0f,360.0f);
+            ImGui::DragFloat("Exp",std::dynamic_pointer_cast<Mandelbulb>(Fractal)->getExponentRef(),.02f, 0,100.f);
             ImGui::End();
         }
         //Game Loop
@@ -168,7 +172,7 @@ int main() {
         cudaSurfaceObject_t surf = 0;
         cudaCreateSurfaceObject(&surf, &resourceDesc);
 
-        launchFragment(surf, width, height, glfwGetTime(), Scene.get());
+        launchFragment(surf, width, height, glfwGetTime(), Fractal.get());
 
         cudaDestroySurfaceObject(surf);
         cudaGraphicsUnmapResources(1,&cudaRes, 0);
