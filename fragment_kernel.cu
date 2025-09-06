@@ -2,9 +2,32 @@
 
 //Do it on the kernel
 
+std::string getNextRenderFileName(const std::string& directoryName) {
+    std::filesystem::path output_dir = directoryName;
+
+    if (std::filesystem::exists(output_dir)) {
+
+        int maxIndex = -1;
+        for (std::filesystem::directory_iterator iter(output_dir), end; iter != end; iter++) {
+            std::string currentPath = iter->path().filename().string();
+            int index = std::stoi(currentPath.substr(
+            currentPath.find_first_of("(") + 1, currentPath.find_last_of(")")
+            ));
+            maxIndex = index > maxIndex ? index : maxIndex;
+        }
+
+        std::stringstream s;
+        s << "Render(" << maxIndex+1 << ").jpg";
+        output_dir = output_dir / s.str();
+    }
+
+    return output_dir.string();
+}
+
 #define MAX_STEPS 200
 __global__
-void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const DevicePrimitive<T>* scene) {
+void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time) {
+
 
     const unsigned int x = threadIdx.x + blockIdx.x * blockDim.x;
     const unsigned int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -30,7 +53,7 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
         p = ro + (rd * t);
 
         //Check SDF
-        scene->SDF(p,&dataSize, data);
+        //*******scene->SDF(p,&dataSize, data);
         //printf("%f \n", data[0]);
         //March by this unit
         if (abs(data[0]) < 0.001f || t > 100.0f) { break;}
@@ -47,11 +70,11 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
     if (data[0] < 0.01f) {
         mask =1.f;
         //we hit a surface, calculate its normal
-        ray::vec3 normal = scene->Normal(p);
+        //*******ray::vec3 normal = scene->Normal(p);
 
         //calculate dot product between normal and a light source
         ray::vec3 incident = ray::normalize(lightSource - p);
-        diffuse = ray::dot(incident, normal) * intensity;
+        //********diffuse = ray::dot(incident, normal) * intensity;
         ambient = 0.7f;
 
 
@@ -59,7 +82,7 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
         edge = edge * edge * 0.7f;
 
         ray::vec3 viewing = ray::normalize(ro - p);
-        rim = pow(1.0f - max(ray::dot(normal, viewing), 0.0f), 2.0f);
+        //**********rim = pow(1.0f - max(ray::dot(normal, viewing), 0.0f), 2.0f);
 
     }
     float val =  ray::clamp(t * 0.2f + (i /(float)MAX_STEPS), 0.f, 1.f);
@@ -96,27 +119,6 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
     }
 
 }
-std::string getNextRenderFileName(const std::string& directoryName) {
-    std::filesystem::path output_dir = directoryName;
-
-    if (std::filesystem::exists(output_dir)) {
-
-        int maxIndex = -1;
-        for (std::filesystem::directory_iterator iter(output_dir), end; iter != end; iter++) {
-            std::string currentPath = iter->path().filename().string();
-            int index = std::stoi(currentPath.substr(
-            currentPath.find_first_of("(") + 1, currentPath.find_last_of(")")
-            ));
-            maxIndex = index > maxIndex ? index : maxIndex;
-        }
-
-        std::stringstream s;
-        s << "Render(" << maxIndex+1 << ").jpg";
-        output_dir = output_dir / s.str();
-    }
-
-    return output_dir.string();
-}
 
 // void write_solid_image() {
 //     unsigned char* image = new unsigned char[width * height * 3];
@@ -136,14 +138,30 @@ std::string getNextRenderFileName(const std::string& directoryName) {
 //
 //     stbi_write_jpg(getNextRenderFileName("../Renders").c_str(),width , height, 3, image, 300);
 // }
+__global__
+void Debugkernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int height) {
+    const unsigned int x = threadIdx.x + blockIdx.x * blockDim.x;
+    const unsigned int y = threadIdx.y + blockIdx.y * blockDim.y;
+    if (x < width && y < height) {
+        // image[(y * width + x) * 3 + 0] = (unsigned int)(fcolor.r * 255.0f);
+        // image[(y * width + x) * 3 + 1] = (unsigned int)(fcolor.g * 255.0f);
+        // image[(y * width + x) *3 + 2] = (unsigned int)(fcolor.b * 255.0f);
 
+        unsigned char r = (unsigned char)(0.f);
+        unsigned char g = (unsigned char)(0.f);
+        unsigned char b = (unsigned char)(0.f);
+        unsigned char a = 255;
 
+        surf2Dwrite(make_uchar4(r,g,b,a), surf, x* sizeof(uchar4), (height-1)-y);
+
+    }
+}
 void launchFragment(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const Primitive* scene) {
     dim3 ThreadsPerBlock(16, 16);
     dim3 GridDim((width + 15) / 16, (height + 15) / 16 );
 
-    cudaMalloc(&DP, sizeof(DevicePrimitive<Cube>));
-    cudaMemcpy(DP, &Conversion, sizeof(DevicePrimitive<Cube>), cudaMemcpyHostToDevice);
-    FragmentKernel<<<GridDim, ThreadsPerBlock>>>(surf,width, height,time,DP);
+    // cudaMalloc(&DP, sizeof(DevicePrimitive<Cube>));
+    // cudaMemcpy(DP, &Conversion, sizeof(DevicePrimitive<Cube>), cudaMemcpyHostToDevice);
+    Debugkernel<<<GridDim, ThreadsPerBlock>>>(surf,width, height);
     cudaDeviceSynchronize();
 }

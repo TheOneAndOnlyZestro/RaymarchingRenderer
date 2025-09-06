@@ -30,9 +30,6 @@ ray::vec3 Primitive::getScale() const {
     return scale;
 }
 
-bool Primitive::isOperator() const {
-    return getType() == PrimitiveType::UNION || getType() == PrimitiveType::INTERSECT;
-}
 
 void Primitive::getData(float *out, size_t *size) const{
     if (size!=nullptr)
@@ -79,7 +76,7 @@ void Cube::CubeSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &ro
     out[0] = ray::length(ray::max(q, 0.f)) + min( ray::compMax(q) , 0.0);
 }
 
-void Cube::CubeSDF(const float *input, size_t *size, float *out) {
+void Cube::CubeSDFF(const float *input, size_t *size, float *out) {
     CubeSDF(input, &input[3], &input[6], &input[9], size,out);
 }
 
@@ -89,7 +86,7 @@ void Sphere::SphereSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3
     out[0]=ray::length(p-loc) - radius;
 }
 
-void Sphere::SphereSDF(const float *input, size_t *size, float *out) {
+void Sphere::SphereSDFF(const float *input, size_t *size, float *out) {
     SphereSDF(input, &input[3], &input[6], &input[9], input[12], size, out);
 }
 
@@ -117,13 +114,17 @@ void Mandelbulb::MandelbulbSDF(const ray::vec3 &p, const ray::vec3 &loc, const r
     out[1] =  length(zold) - floorf(length(zold));
 }
 
-void Mandelbulb::MandelbulbSDF(const float *input, size_t *size, float *out) {
+void Mandelbulb::MandelbulbSDFF(const float *input, size_t *size, float *out) {
     MandelbulbSDF(input, &input[3], &input[6], &input[9],(unsigned int)input[12], input[13], size, out);
 }
 
 //Sphere SDF
 Sphere::Sphere(const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale, const float _radius)
     :Primitive(_loc, _rot, _scale), radius(_radius) {}
+
+void Sphere::SDF(const float *input, size_t *size, float *out) {
+    Sphere::SphereSDFF(input,size,out);
+}
 
 
 PrimitiveType Sphere::getType() const {
@@ -158,7 +159,9 @@ Sphere::~Sphere() {}
 Cube::Cube(const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale)
 :Primitive(_loc,_rot,_scale) {}
 
-
+void Cube::SDF(const float *input, size_t *size, float *out) {
+    Cube::CubeSDFF(input,size,out);
+}
 
 
 PrimitiveType Cube::getType() const {
@@ -182,6 +185,10 @@ unsigned int * Mandelbulb::getIterationsRef() {
 
 void Mandelbulb::setIterations(const unsigned int _iterations) {
     this->iterations = _iterations;
+}
+
+void Mandelbulb::SDF(const float *input, size_t *size, float *out) {
+    Mandelbulb::SDF(input,size,out);
 }
 
 void Mandelbulb::getData(float *out, size_t *size) const {
@@ -213,47 +220,53 @@ void Mandelbulb::setExponent(const float _exponent) {
 
 Mandelbulb::~Mandelbulb() {}
 
-Union::Union(const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
+BinaryOperator::BinaryOperator(const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
     : p1(_p1), p2(_p2),
-Primitive( (p1->getLoc() + p2->getLoc())/2.f,
+Primitive( (_p1->getLoc() + _p2->getLoc())/2.f,
     ray::vec3(),ray::vec3(1.f,1.f,1.f)) {}
+
+PrimitiveType BinaryOperator::getType() const {
+    return PrimitiveType::BINARY_OPERATOR;
+}
+
+std::shared_ptr<Primitive> BinaryOperator::getP1() const {
+    return p1;
+}
+
+std::shared_ptr<Primitive> BinaryOperator::getP2() const {
+    return p2;
+}
+
+Union::Union(const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
+    :BinaryOperator(_p1,_p2){}
 
 PrimitiveType Union::getType() const {
     return PrimitiveType::UNION;
 }
 
-std::shared_ptr<Primitive> Union::getP1() const {
-    return p1;
+void Union::SDF(const float *input, size_t *size, float *out) {
+    UnionSDFF(input,size,out);
 }
 
-std::shared_ptr<Primitive> Union::getP2() const {
-    return p2;
-}
 
-void Union::UnionSDF(const float *input, size_t *size, float *out) {
+void Union::UnionSDFF(const float *input, size_t *size, float *out) {
     if (size != nullptr)
         *size = 1;
     out[0] = min(input[0], input[1]);
 }
 
 Intersect::Intersect(const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
-: p1(_p1), p2(_p2),
-Primitive( (p1->getLoc() + p2->getLoc())/2.f,
-ray::vec3(),ray::vec3(1.f,1.f,1.f)) {}
+:BinaryOperator(_p1,_p2) {}
 
 PrimitiveType Intersect::getType() const {
     return PrimitiveType::INTERSECT;
 }
 
-std::shared_ptr<Primitive> Intersect::getP1() const {
-    return p1;
+void Intersect::SDF(const float *input, size_t *size, float *out) {
+    IntersectSDFF(input,size,out);
 }
 
-std::shared_ptr<Primitive> Intersect::getP2() const {
-    return p2;
-}
-
-void Intersect::IntersectSDF(const float *input, size_t *size, float *out) {
+void Intersect::IntersectSDFF(const float *input, size_t *size, float *out) {
     if (size != nullptr)
         *size = 1;
     out[0] = max(input[0], -input[1]);

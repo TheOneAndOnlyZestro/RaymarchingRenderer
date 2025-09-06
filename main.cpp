@@ -5,7 +5,7 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
-
+#include "ray_flatten_to_CUDA.cuh"
 const float default_verts[] = {
     -1.f, -1.f, 0.f,    0.f,0.f,
     1.f, -1.f, 0.f,     1.f,0.f,
@@ -139,8 +139,30 @@ int main() {
     std::shared_ptr<Primitive> cube =
         std::make_shared<Cube>(ray::vec3(0.f,0.f,-2.3f), ray::vec3(), ray::vec3(0.5f,0.2f,0.4f));
 
-    std::shared_ptr<Primitive> unionScene = std::make_shared<Union>(Fractal,cube);
+    std::shared_ptr<Primitive> cube1 =
+        std::make_shared<Cube>(ray::vec3(0.f,0.5f,-2.3f), ray::vec3(), ray::vec3(0.5f,0.2f,0.4f));
 
+    std::shared_ptr<Primitive> cube2 =
+        std::make_shared<Cube>(ray::vec3(0.f,0.f,-2.1f), ray::vec3(), ray::vec3(0.5f,0.2f,0.4f));
+
+    std::shared_ptr<Primitive> unionScene = std::make_shared<Union>(Fractal,cube);
+    std::shared_ptr<Primitive> unionScene1 = std::make_shared<Union>(unionScene,cube1);
+    std::shared_ptr<Primitive> unionScene2 = std::make_shared<Union>(unionScene1,cube2);
+
+    std::vector<float> output;
+    std::vector<PrimitiveType> outputDesc;
+    ray::flatten(unionScene2, &output,&outputDesc);
+
+    unsigned int offset = 0;
+    for (unsigned int i = 0; i < outputDesc.size(); i++) {
+        std::cout << "<"<< DebugPrim(outputDesc[i]) << ">, (";
+        for (unsigned int j = 0; j < (unsigned int)getPrimSize(outputDesc[i]); j++) {
+            std::cout << output[j+offset] << ", ";
+        }
+        offset += (unsigned int)getPrimSize(outputDesc[i]);
+    }
+
+    std::cout << std::endl;
     while (!glfwWindowShouldClose(window)) {
         //Imgui new frame
         ImGui_ImplOpenGL3_NewFrame();

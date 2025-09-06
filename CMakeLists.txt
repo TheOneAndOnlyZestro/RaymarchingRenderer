@@ -41,7 +41,8 @@
                 ${IMGUI_ROOT}/src/imgui_impl_opengl3.cpp
                 Primitive.cu
                 Primitive.cuh
-                ray_flatten_to_CUDA.h
+                ray_flatten_to_CUDA.cu
+                ray_flatten_to_CUDA.cuh
         )
 
 

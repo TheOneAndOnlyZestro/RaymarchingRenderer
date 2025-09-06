@@ -27,6 +27,7 @@ namespace ray {
         __device__ __host__
         vec3(): x(0.f), y(0.f), z(0.f){}
 
+        __device__ __host__
         inline explicit operator float*() {
             return v;
         }
