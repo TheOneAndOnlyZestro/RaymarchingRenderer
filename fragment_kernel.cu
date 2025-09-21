@@ -26,54 +26,103 @@ std::string getNextRenderFileName(const std::string& directoryName) {
 
 #define MAX_STEPS 200
 
-__device__ void parseExpression(const ray::vec3& p, const float* output, const PrimitiveType* output_disc, float* data, ray::vec3* normal, const unsigned int output_size,const unsigned int outputDiscSize) {
+__device__ void parseExpression(const ray::vec3& p, const float* output, const PrimitiveType* output_disc, float* data, float* d_values,const unsigned int output_size,const unsigned int outputDiscSize) {
     //We want to parse the postfix expression at hand using a stack
-    ray::Stack<float,50> distance_stack;
-    ray::Stack<ray::vec3,50> normal_stack;
-
-    float currentData[4];
-    float operands[2];
+    ray::Stack<float,20> distance_stack;
+    float currentData[1];
     size_t s;
+    unsigned int dOffset = 0;
     unsigned int dataOffset =0;
     for (unsigned int i = 0; i < outputDiscSize; i++) {
         switch (output_disc[i]) {
             case PrimitiveType::CUBE:
                 Cube::CubeSDFF(p,output+dataOffset, &s, currentData);
+                d_values[dOffset] = currentData[0];
+                dOffset++;
                 break;
 
             case PrimitiveType::SPHERE:
                 Sphere::SphereSDFF(p,output+dataOffset, &s, currentData);
+                d_values[dOffset] = currentData[0];
+                dOffset++;
                 break;
 
             case PrimitiveType::MANDELBROT:
                 Mandelbulb::MandelbulbSDFF(p,output+dataOffset, &s, currentData);
+                d_values[dOffset] = currentData[0];
+                dOffset++;
                 break;
 
             case PrimitiveType::UNION:
-                Union::UnionSDFF(distance_stack.pop(),distance_stack.pop(), normal_stack.pop(),normal_stack.pop(), &s, currentData);
+                Union::UnionSDFF(distance_stack.pop(),distance_stack.pop(), &s, currentData);
                 break;
 
             case PrimitiveType::INTERSECT:
-                Intersect::IntersectSDFF(distance_stack.pop(),distance_stack.pop(), normal_stack.pop(),normal_stack.pop(), &s, currentData);
+                Intersect::IntersectSDFF(distance_stack.pop(),distance_stack.pop(), &s, currentData);
                 break;
 
             default:
                 break;
         }
         distance_stack.push(currentData[0]);
-        normal_stack.push(ray::vec3(currentData[1], currentData[2], currentData[3]));
         dataOffset += getPrimSize(output_disc[i]);
 
     }
 
     *data = distance_stack.pop();
-    *normal = normal_stack.pop();
 }
 
+__device__ void parseExpressionNorm(const ray::vec3& p, const float* output, const PrimitiveType* output_disc, ray::vec3* data, const float* d_values, const unsigned int output_size,const unsigned int outputDiscSize) {
+    ray::Stack<ray::vec3,20> norm_stack;
+    ray::Stack<float,20> d_stack;
+    ray::vec3 currentData;
+    size_t s;
+    unsigned int dOffset = 0;
+    unsigned int dataOffset =0;
+    float currentD = 0;
+    for (unsigned int i = 0; i < outputDiscSize; i++) {
+        switch (output_disc[i]) {
+            case PrimitiveType::CUBE:
+                Cube::CubeSDFFNorm(p,output+dataOffset,&currentData);
+                d_stack.push(d_values[dOffset]);
+                dOffset++;
+                break;
 
+            case PrimitiveType::SPHERE:
+                Sphere::SphereSDFFNorm(p,output+dataOffset, &currentData);
+                d_stack.push(d_values[dOffset]);
+                dOffset++;
+                break;
+
+            case PrimitiveType::MANDELBROT:
+                Mandelbulb::MandelbulbSDFFNorm(p,output+dataOffset,&currentData);
+                d_stack.push(d_values[dOffset]);
+                dOffset++;
+                break;
+
+            case PrimitiveType::UNION:
+                Union::UnionSDFFNorm(d_stack.pop(),d_stack.pop(), norm_stack.pop(), norm_stack.pop() ,&currentData, &currentD);
+                d_stack.push(currentD);
+                break;
+
+            case PrimitiveType::INTERSECT:
+                Intersect::IntersectSDFFNorm(d_stack.pop(),d_stack.pop(), norm_stack.pop(), norm_stack.pop() ,&currentData, &currentD);
+                d_stack.push(currentD);
+                break;
+
+            default:
+                break;
+        }
+        norm_stack.push(currentData);
+        dataOffset += getPrimSize(output_disc[i]);
+
+    }
+
+    *data = norm_stack.pop();
+}
 __global__
 void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const float* output, const unsigned int output_size, const PrimitiveType* output_disc, const unsigned int outputDiscSize) {
-
+    //printf("%f",output[0]);
     const unsigned int x = threadIdx.x + blockIdx.x * blockDim.x;
     const unsigned int y = threadIdx.y + blockIdx.y * blockDim.y;
 
@@ -93,13 +142,14 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
     float data = 0;
     ray::vec3 normal(0.f,0.f,0.f);
     ray::vec3 p;
+    float dValues[20];
     size_t dataSize;
     for (i = 0; i < MAX_STEPS; i++) {
         //Calculate position after marching according to line
         p = ro + (rd * t);
 
         //Check SDF
-        parseExpression(p,output, output_disc, &data, &normal, output_size ,outputDiscSize);
+        parseExpression(p,output, output_disc, &data, dValues, output_size ,outputDiscSize);
         //printf("%f \n", data[0]);
         //March by this unit
         if (abs(data) < 0.001f || t > 100.0f) { break;}
@@ -114,6 +164,7 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
     float mask = 0.0f;
     if (data < 0.01f) {
         mask =1.f;
+        parseExpressionNorm(p, output, output_disc, &normal, dValues, output_size ,outputDiscSize);
         //we hit a surface, calculate its normal
         //calculate dot product between normal and a light source
         ray::vec3 incident = ray::normalize(lightSource - p);
@@ -195,16 +246,20 @@ void launchFragment(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
     dim3 ThreadsPerBlock(16, 16);
     dim3 GridDim((width + 15) / 16, (height + 15) / 16 );
 
-    float* output_device;
-    PrimitiveType* output_disc_device;
-    cudaMalloc(&output_device, sizeof(float) * output_size);
-    cudaMalloc(&output_disc_device, sizeof(PrimitiveType) * outputDiscSize);
-
-    cudaMemcpy(output_device, output, sizeof(float) * output_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(output_disc_device, output_disc, sizeof(PrimitiveType) * outputDiscSize, cudaMemcpyHostToDevice);
-    FragmentKernel<<<GridDim, ThreadsPerBlock>>>(surf,width, height, time, output_device,output_size, output_disc_device, outputDiscSize);
+    FragmentKernel<<<GridDim, ThreadsPerBlock>>>(surf,width, height, time, output,output_size, output_disc, outputDiscSize);
     cudaDeviceSynchronize();
 
-    cudaFree(output_device);
+}
+
+void Allocate(float** output_device, PrimitiveType** output_disc_device, unsigned int output_size, unsigned int outputDiscSize) {
+    cudaMalloc(output_device, sizeof(float) * output_size);
+    cudaMalloc(output_disc_device, sizeof(PrimitiveType) * outputDiscSize);
+}
+void Free(float* output_device, PrimitiveType* output_disc_device) {
     cudaFree(output_disc_device);
+    cudaFree(output_device);
+}
+void toDevice(float* output_host, PrimitiveType* output_disc_host,float* output_device, PrimitiveType* output_disc_device, unsigned int output_size, unsigned int outputDiscSize) {
+    cudaMemcpy(output_device, output_host, sizeof(float) * output_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(output_disc_device, output_disc_host, sizeof(PrimitiveType) * outputDiscSize, cudaMemcpyHostToDevice);
 }

@@ -127,6 +127,9 @@ class Sphere : public Primitive {
 
     __device__ __host__
     static void SphereSDFF(const ray::vec3& p,const float* input,size_t* size, float* out);
+
+    __device__ __host__
+    static void SphereSDFFNorm(const ray::vec3& p,const float* input, ray::vec3* out);
     inline bool isOperator() const override {return false;}
     ~Sphere() override;
 };
@@ -145,6 +148,10 @@ public:
 
     __device__ __host__
     static void CubeSDFF(const ray::vec3& p,const float* input, size_t* size, float* out);
+
+    __device__ __host__
+    static void CubeSDFFNorm(const ray::vec3& p,const float* input, ray::vec3* out);
+
     inline bool isOperator() const override {return false;}
     ~Cube() override;
 };
@@ -184,6 +191,9 @@ public:
 
     __device__ __host__
     static void MandelbulbSDFF(const ray::vec3& p,const float* input,size_t* size, float* out);
+
+    __device__ __host__
+    static void MandelbulbSDFFNorm(const ray::vec3& p,const float* input, ray::vec3* out);
     inline bool isOperator() const override {return false;}
     ~Mandelbulb() override;
 };
@@ -206,8 +216,10 @@ class Union : public BinaryOperator {
     virtual PrimitiveType getType() const override;
 
     __device__ __host__
-    static void UnionSDFF(const float d1, const float d2, const ray::vec3& n1, const ray::vec3& n2, size_t *size, float *out);
+    static void UnionSDFF(const float d1, const float d2, size_t *size, float *out);
 
+    __device__ __host__
+    static void UnionSDFFNorm(float d1, float d2,const ray::vec3& n1, const ray::vec3&n2,ray::vec3* out,float* dout);
 };
 
 class Intersect : public BinaryOperator {
@@ -217,7 +229,10 @@ public:
     virtual PrimitiveType getType() const override;
 
     __device__ __host__
-    static void IntersectSDFF(const float d1, const float d2, const ray::vec3& n1, const ray::vec3& n2, size_t *size, float *out);
+    static void IntersectSDFF(const float d1, const float d2, size_t *size, float *out);
+
+    __device__ __host__
+    static void IntersectSDFFNorm(float d1, float d2,const ray::vec3& n1, const ray::vec3&n2,ray::vec3* out, float* dout);
 
 };
 #endif

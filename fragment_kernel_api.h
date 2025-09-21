@@ -15,7 +15,9 @@
 #include <cuda_runtime.h>
 
 void launchFragment(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const float* output, const unsigned int output_size ,const PrimitiveType* output_disc,const unsigned int outputDiscSize);
-
+void Allocate(float** output_device, PrimitiveType** output_disc_device, unsigned int output_size, unsigned int outputDiscSize);
+void Free(float* output_device, PrimitiveType* output_disc_device);
+void toDevice(float* output_host, PrimitiveType* output_disc_host,float* output_device, PrimitiveType* output_disc_device, unsigned int output_size, unsigned int outputDiscSize);
 #endif
 
 

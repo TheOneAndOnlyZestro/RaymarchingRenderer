@@ -79,25 +79,24 @@ void Cube::CubeSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &ro
 __device__ __host__
 void Cube::CubeSDFF(const ray::vec3& p, const float *input, size_t *size, float *out) {
     CubeSDF(p, &input[0], &input[3], &input[6], size,out);
-
-
-    float dxp,dxn,dyp,dyn,dzp,dzn;
-    CubeSDF(p + ray::vec3(EPSILON,0.0f,0.0f),&input[0], &input[3], &input[6],size,&dxp);
-    CubeSDF(p - ray::vec3(EPSILON,0.0f,0.0f),&input[0], &input[3], &input[6],size,&dxn);
-
-    CubeSDF(p + ray::vec3(0.0f,EPSILON,0.0f),&input[0], &input[3], &input[6],size,&dyp);
-    CubeSDF(p - ray::vec3(0.0f,EPSILON,0.0f),&input[0], &input[3], &input[6],size,&dyn);
-
-    CubeSDF(p + ray::vec3(0.0f,0.0f,EPSILON),&input[0], &input[3], &input[6],size,&dzp);
-    CubeSDF(p - ray::vec3(0.0f,0.0f,EPSILON),&input[0], &input[3], &input[6],size,&dzn);
-
-
-    ray::vec3 norm = ray::normalize(ray::vec3(dxp-dxn, dyp-dyn, dzp-dzn) );
-    out[1] = norm.x;
-    out[2] = norm.y;
-    out[3] = norm.z;
-
 }
+
+void Cube::CubeSDFFNorm(const ray::vec3 &p, const float *input, ray::vec3 *out) {
+    size_t size =0;
+    float dxp,dxn,dyp,dyn,dzp,dzn;
+    CubeSDF(p + ray::vec3(EPSILON,0.0f,0.0f),&input[0], &input[3], &input[6],&size,&dxp);
+    CubeSDF(p - ray::vec3(EPSILON,0.0f,0.0f),&input[0], &input[3], &input[6],&size,&dxn);
+
+    CubeSDF(p + ray::vec3(0.0f,EPSILON,0.0f),&input[0], &input[3], &input[6],&size,&dyp);
+    CubeSDF(p - ray::vec3(0.0f,EPSILON,0.0f),&input[0], &input[3], &input[6], &size,&dyn);
+
+    CubeSDF(p + ray::vec3(0.0f,0.0f,EPSILON),&input[0], &input[3], &input[6],&size,&dzp);
+    CubeSDF(p - ray::vec3(0.0f,0.0f,EPSILON),&input[0], &input[3], &input[6],&size,&dzn);
+
+
+    *out = ray::normalize(ray::vec3(dxp-dxn, dyp-dyn, dzp-dzn) );
+}
+
 __device__ __host__
 void Sphere::SphereSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
                        const float radius, size_t *size, float *out) {
@@ -109,23 +108,25 @@ void Sphere::SphereSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3
 __device__ __host__
 void Sphere::SphereSDFF(const ray::vec3& p,const float *input, size_t *size, float *out) {
     SphereSDF(p, &input[0], &input[3], &input[6], input[9], size, out);
-
-    float dxp,dxn,dyp,dyn,dzp,dzn;
-    SphereSDF(p + ray::vec3(EPSILON,0.0f,0.0f),&input[0], &input[3], &input[6], input[9],size,&dxp);
-    SphereSDF(p - ray::vec3(EPSILON,0.0f,0.0f),&input[0], &input[3], &input[6], input[9],size,&dxn);
-
-    SphereSDF(p + ray::vec3(0.0f,EPSILON,0.0f),&input[0], &input[3], &input[6], input[9],size,&dyp);
-    SphereSDF(p - ray::vec3(0.0f,EPSILON,0.0f),&input[0], &input[3], &input[6], input[9],size,&dyn);
-
-    SphereSDF(p + ray::vec3(0.0f,0.0f,EPSILON),&input[0], &input[3], &input[6], input[9],size,&dzp);
-    SphereSDF(p - ray::vec3(0.0f,0.0f,EPSILON),&input[0], &input[3], &input[6], input[9],size,&dzn);
-
-
-    ray::vec3 norm = ray::normalize(ray::vec3(dxp-dxn, dyp-dyn, dzp-dzn) );
-    out[1] = norm.x;
-    out[2] = norm.y;
-    out[3] = norm.z;
 }
+__device__ __host__
+void Sphere::SphereSDFFNorm(const ray::vec3 &p, const float *input, ray::vec3 *out) {
+    size_t size =0;
+    float dxp,dxn,dyp,dyn,dzp,dzn;
+    SphereSDF(p + ray::vec3(EPSILON,0.0f,0.0f),&input[0], &input[3], &input[6], input[9],&size,&dxp);
+    SphereSDF(p - ray::vec3(EPSILON,0.0f,0.0f),&input[0], &input[3], &input[6], input[9],&size,&dxn);
+
+    SphereSDF(p + ray::vec3(0.0f,EPSILON,0.0f),&input[0], &input[3], &input[6], input[9],&size,&dyp);
+    SphereSDF(p - ray::vec3(0.0f,EPSILON,0.0f),&input[0], &input[3], &input[6], input[9],&size,&dyn);
+
+    SphereSDF(p + ray::vec3(0.0f,0.0f,EPSILON),&input[0], &input[3], &input[6], input[9],&size,&dzp);
+    SphereSDF(p - ray::vec3(0.0f,0.0f,EPSILON),&input[0], &input[3], &input[6], input[9],&size,&dzn);
+
+
+    *out = ray::normalize(ray::vec3(dxp-dxn, dyp-dyn, dzp-dzn) );
+
+}
+
 __device__ __host__
 void Mandelbulb::MandelbulbSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
                                const unsigned int iterations, const float exponent, size_t *size, float *out) {
@@ -154,22 +155,23 @@ void Mandelbulb::MandelbulbSDF(const ray::vec3 &p, const ray::vec3 &loc, const r
 __device__ __host__
 void Mandelbulb::MandelbulbSDFF(const ray::vec3& p,const float *input, size_t *size, float *out) {
     MandelbulbSDF(p, &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], size, out);
+}
 
+void Mandelbulb::MandelbulbSDFFNorm(const ray::vec3 &p, const float *input, ray::vec3 *out) {
+    size_t size = 0;
     float dxp,dxn,dyp,dyn,dzp,dzn;
-    MandelbulbSDF(p + ray::vec3(EPSILON,0.0f,0.0f), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], size,&dxp);
-    MandelbulbSDF(p - ray::vec3(EPSILON,0.0f,0.0f), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], size,&dxn);
+    MandelbulbSDF(p + ray::vec3(EPSILON,0.0f,0.0f), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dxp);
+    MandelbulbSDF(p - ray::vec3(EPSILON,0.0f,0.0f), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dxn);
 
-    MandelbulbSDF(p + ray::vec3(0.0f,EPSILON,0.0f), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], size,&dyp);
-    MandelbulbSDF(p - ray::vec3(0.0f,EPSILON,0.0f), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], size,&dyn);
+    MandelbulbSDF(p + ray::vec3(0.0f,EPSILON,0.0f), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dyp);
+    MandelbulbSDF(p - ray::vec3(0.0f,EPSILON,0.0f), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dyn);
 
-    MandelbulbSDF(p + ray::vec3(0.0f,0.0f,EPSILON), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], size,&dzp);
-    MandelbulbSDF(p - ray::vec3(0.0f,0.0f,EPSILON), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], size,&dzn);
+    MandelbulbSDF(p + ray::vec3(0.0f,0.0f,EPSILON), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dzp);
+    MandelbulbSDF(p - ray::vec3(0.0f,0.0f,EPSILON), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dzn);
 
 
-    ray::vec3 norm = ray::normalize(ray::vec3(dxp-dxn, dyp-dyn, dzp-dzn) );
-    out[1] = norm.x;
-    out[2] = norm.y;
-    out[3] = norm.z;
+    *out = ray::normalize(ray::vec3(dxp-dxn, dyp-dyn, dzp-dzn) );
+
 }
 
 //Sphere SDF
@@ -284,15 +286,21 @@ PrimitiveType Union::getType() const {
     return PrimitiveType::UNION;
 }
 __device__ __host__
-void Union::UnionSDFF(const float d1, const float d2, const ray::vec3& n1, const ray::vec3& n2, size_t *size, float *out) {
+void Union::UnionSDFF(const float d1, const float d2, size_t *size, float *out) {
     if (size != nullptr)
         *size = 4;
     out[0] = min(d1, d2);
-    out[1] = min(n1.x, n2.x);
-    out[2] = min(n1.y, n2.y);
-    out[3] = min(n1.z, n2.z);
-
 }
+
+void Union::UnionSDFFNorm(float d1, float d2, const ray::vec3 &n1, const ray::vec3 &n2,ray::vec3 *out, float* dout) {
+    *dout = min(d1, d2);
+    if (d1 < d2) {
+        *out = n1;
+    }else {
+        *out = n2;
+    }
+}
+
 Intersect::Intersect(const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
 :BinaryOperator(_p1,_p2) {}
 
@@ -300,12 +308,18 @@ PrimitiveType Intersect::getType() const {
     return PrimitiveType::INTERSECT;
 }
 __device__ __host__
-void Intersect::IntersectSDFF(const float d1, const float d2, const ray::vec3& n1, const ray::vec3& n2, size_t *size, float *out) {
+void Intersect::IntersectSDFF(const float d1, const float d2, size_t *size, float *out) {
     if (size != nullptr)
         *size = 4;
-    out[0] = max(d1, -d2);
-    out[1] = max(n1.x, -n2.x);
-    out[2] = max(n1.y, -n2.y);
-    out[3] = max(n1.z, -n2.z);
+    out[0] = max(d1, d2);
+}
+__device__ __host__
+void Intersect::IntersectSDFFNorm(float d1, float d2,const ray::vec3& n1, const ray::vec3&n2, ray::vec3 *out, float* dout) {
+    *dout = max(d1, d2);
+    if (d1 > d2) {
+        *out = n1;
+    }else {
+        *out = n2;
+    }
 }
 

@@ -137,22 +137,27 @@ int main() {
         std::make_shared<Mandelbulb>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(1.f,1.f,1.f), 8, 8);
 
     std::shared_ptr<Primitive> cube =
-        std::make_shared<Cube>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(2.5f,2.2f,2.4f));
+        std::make_shared<Cube>(ray::vec3(0.2f,1.f,-3.3f), ray::vec3(), ray::vec3(0.7f,0.7f,1.0f));
 
     std::shared_ptr<Primitive> cube1 =
-        std::make_shared<Cube>(ray::vec3(0.f,0.5f,-2.3f), ray::vec3(), ray::vec3(0.5f,0.2f,0.4f));
+        std::make_shared<Cube>(ray::vec3(0.5f,0.7f,-3.3f), ray::vec3(), ray::vec3(0.2f,0.2f,0.2f));
 
     std::shared_ptr<Primitive> cube2 =
-        std::make_shared<Cube>(ray::vec3(0.f,0.f,-2.1f), ray::vec3(), ray::vec3(0.5f,0.2f,0.4f));
+        std::make_shared<Cube>(ray::vec3(-0.5f,0.f,-2.1f), ray::vec3(), ray::vec3(0.5f,0.2f,0.4f));
 
-    std::shared_ptr<Primitive> interScene = std::make_shared<Intersect>(Fractal,cube);
-    std::shared_ptr<Primitive> unionScene1 = std::make_shared<Union>(interScene,cube1);
+    //std::shared_ptr<Primitive> interScene = std::make_shared<Union>(Fractal,cube);
+    std::shared_ptr<Primitive> unionScene1 = std::make_shared<Intersect>(Fractal,cube);
     std::shared_ptr<Primitive> unionScene2 = std::make_shared<Union>(unionScene1,cube2);
 
     std::vector<float> output;
     std::vector<PrimitiveType> outputDesc;
-    ray::flatten(interScene, &output,&outputDesc);
+    ray::flatten(unionScene1, &output,&outputDesc);
 
+    float* output_device;
+    PrimitiveType* output_disc_device;
+    Allocate(&output_device, &output_disc_device, output.size(), outputDesc.size());
+
+    toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
     unsigned int offset = 0;
     for (unsigned int i = 0; i < outputDesc.size(); i++) {
         std::cout << "<"<< DebugPrim(outputDesc[i]) << ">, (";
@@ -194,7 +199,7 @@ int main() {
         cudaSurfaceObject_t surf = 0;
         cudaCreateSurfaceObject(&surf, &resourceDesc);
 
-        launchFragment(surf, width,height,glfwGetTime(),output.data(),output.size(), outputDesc.data(), outputDesc.size());
+        launchFragment(surf, width,height,glfwGetTime(),output_device,output.size(), output_disc_device, outputDesc.size());
 
         cudaDestroySurfaceObject(surf);
         cudaGraphicsUnmapResources(1,&cudaRes, 0);
@@ -216,6 +221,7 @@ int main() {
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
+    Free(output_device, output_disc_device);
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
