@@ -137,7 +137,7 @@ int main() {
         std::make_shared<Mandelbulb>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(1.f,1.f,1.f), 8, 8);
 
     std::shared_ptr<Primitive> cube =
-        std::make_shared<Cube>(ray::vec3(0.f,0.f,-2.3f), ray::vec3(), ray::vec3(0.5f,0.2f,0.4f));
+        std::make_shared<Cube>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(2.5f,2.2f,2.4f));
 
     std::shared_ptr<Primitive> cube1 =
         std::make_shared<Cube>(ray::vec3(0.f,0.5f,-2.3f), ray::vec3(), ray::vec3(0.5f,0.2f,0.4f));
@@ -145,13 +145,13 @@ int main() {
     std::shared_ptr<Primitive> cube2 =
         std::make_shared<Cube>(ray::vec3(0.f,0.f,-2.1f), ray::vec3(), ray::vec3(0.5f,0.2f,0.4f));
 
-    std::shared_ptr<Primitive> unionScene = std::make_shared<Union>(Fractal,cube);
-    std::shared_ptr<Primitive> unionScene1 = std::make_shared<Union>(unionScene,cube1);
+    std::shared_ptr<Primitive> interScene = std::make_shared<Intersect>(Fractal,cube);
+    std::shared_ptr<Primitive> unionScene1 = std::make_shared<Union>(interScene,cube1);
     std::shared_ptr<Primitive> unionScene2 = std::make_shared<Union>(unionScene1,cube2);
 
     std::vector<float> output;
     std::vector<PrimitiveType> outputDesc;
-    ray::flatten(unionScene2, &output,&outputDesc);
+    ray::flatten(interScene, &output,&outputDesc);
 
     unsigned int offset = 0;
     for (unsigned int i = 0; i < outputDesc.size(); i++) {
@@ -194,7 +194,7 @@ int main() {
         cudaSurfaceObject_t surf = 0;
         cudaCreateSurfaceObject(&surf, &resourceDesc);
 
-        launchFragment(surf, width, height, glfwGetTime(), Fractal.get());
+        launchFragment(surf, width,height,glfwGetTime(),output.data(),output.size(), outputDesc.data(), outputDesc.size());
 
         cudaDestroySurfaceObject(surf);
         cudaGraphicsUnmapResources(1,&cudaRes, 0);

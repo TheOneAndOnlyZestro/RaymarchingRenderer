@@ -11,9 +11,10 @@
 #include "math.h"
 #include "Primitive.cuh"
 #include "ray_FFT.cuh"
+#include "ray_Stack.cuh"
 #include <cuda_runtime.h>
 
-void launchFragment(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const float* output, const PrimitiveType* output_disc);
+void launchFragment(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const float* output, const unsigned int output_size ,const PrimitiveType* output_disc,const unsigned int outputDiscSize);
 
 #endif
 

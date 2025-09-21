@@ -6,30 +6,38 @@
 #define RAYMARCHINGCUDA_RAY_STACK_H
 
 namespace ray {
+    template<typename T, unsigned int max_size>
     class Stack {
     private:
-        float* data;
+        T data[max_size];
         size_t size;
-        size_t max_size;
     public:
         __host__ __device__
-        Stack(unsigned int max_num = 50);
+        inline Stack(): size(0) {}
 
         __host__ __device__
-        void push(float x);
+        inline void push(T x) {
+            data[size++] = x;
+        }
         __host__ __device__
-        float pop();
+        inline T pop() {
+            return data[--size];
+        }
         __host__ __device__
-        float peek();
+        inline T peek() {
+            return data[size];
+        }
 
         __host__ __device__
-        bool isEmpty() const;
+        inline bool isEmpty() const {
+            return size == 0;
+        }
         __host__ __device__
-        bool isFull() const;
+        inline bool isFull() const {
+            return size == max_size;
+        }
         __host__ __device__
-        ~Stack();
-
-
+        inline ~Stack(){}
 
     };
 }

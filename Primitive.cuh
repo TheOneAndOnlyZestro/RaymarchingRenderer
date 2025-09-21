@@ -12,6 +12,7 @@ enum class PrimitiveType {
     UNION, INTERSECT    //Operators
 };
 
+__device__ __host__
 inline const char* DebugPrim(PrimitiveType p) {
     switch (p) {
         case PrimitiveType::PRIMITIVE:
@@ -32,7 +33,7 @@ inline const char* DebugPrim(PrimitiveType p) {
             return "NOT::PRIMITIVE";
     }
 }
-
+__device__ __host__
 inline size_t getPrimSize(PrimitiveType p) {
     switch (p) {
         case PrimitiveType::PRIMITIVE:
@@ -50,7 +51,7 @@ inline size_t getPrimSize(PrimitiveType p) {
         case PrimitiveType::INTERSECT:
             return 9;
         default:
-            return -1;
+            return 0;
     }
 }
 class Primitive {
@@ -68,9 +69,6 @@ private:
 public:
 
     Primitive(const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale);
-
-    __device__ __host__
-    virtual void SDF(const float* input,size_t* size, float* out)=0;
 
     //Accessor functions
     virtual ray::vec3 getLoc() const;
@@ -110,9 +108,6 @@ class Sphere : public Primitive {
     
     Sphere(const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale, const float _radius);
 
-    __host__ __device__
-    void SDF(const float* input,size_t* size, float* out) override;
-
     virtual PrimitiveType getType() const override;
 
     //Accessor Functions
@@ -131,7 +126,7 @@ class Sphere : public Primitive {
     size_t* size, float* out);
 
     __device__ __host__
-    static void SphereSDFF(const float* input,size_t* size, float* out);
+    static void SphereSDFF(const ray::vec3& p,const float* input,size_t* size, float* out);
     inline bool isOperator() const override {return false;}
     ~Sphere() override;
 };
@@ -141,9 +136,6 @@ public:
     
     Cube(const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale);
 
-    __host__ __device__
-    void SDF(const float* input,size_t* size, float* out) override;
-    
     virtual PrimitiveType getType() const override;
 
     __device__ __host__
@@ -152,7 +144,7 @@ public:
     size_t* size, float* out);
 
     __device__ __host__
-    static void CubeSDFF(const float* input, size_t* size, float* out);
+    static void CubeSDFF(const ray::vec3& p,const float* input, size_t* size, float* out);
     inline bool isOperator() const override {return false;}
     ~Cube() override;
 };
@@ -173,9 +165,6 @@ public:
     
     virtual void setIterations(const unsigned int _iterations);
 
-    __host__ __device__
-    void SDF(const float* input,size_t* size, float* out) override;
-
     virtual void getData(float* out, size_t* size) const override;
     virtual size_t getSize() const override;
 
@@ -194,7 +183,7 @@ public:
     size_t* size, float* out);
 
     __device__ __host__
-    static void MandelbulbSDFF(const float* input,size_t* size, float* out);
+    static void MandelbulbSDFF(const ray::vec3& p,const float* input,size_t* size, float* out);
     inline bool isOperator() const override {return false;}
     ~Mandelbulb() override;
 };
@@ -216,22 +205,19 @@ class Union : public BinaryOperator {
     Union(const std::shared_ptr<Primitive>& _p1,const std::shared_ptr<Primitive>& _p2);
     virtual PrimitiveType getType() const override;
 
-    __host__ __device__
-    void SDF(const float* input,size_t* size, float* out) override;
     __device__ __host__
-    static void UnionSDFF(const float* input, size_t* size, float* out);
+    static void UnionSDFF(const float d1, const float d2, const ray::vec3& n1, const ray::vec3& n2, size_t *size, float *out);
 
 };
 
 class Intersect : public BinaryOperator {
 public:
+    __device__ __host__
     Intersect(const std::shared_ptr<Primitive>& _p1,const std::shared_ptr<Primitive>& _p2);
     virtual PrimitiveType getType() const override;
 
-    __host__ __device__
-    void SDF(const float* input,size_t* size, float* out) override;
     __device__ __host__
-    static void IntersectSDFF(const float* input, size_t* size, float* out);
+    static void IntersectSDFF(const float d1, const float d2, const ray::vec3& n1, const ray::vec3& n2, size_t *size, float *out);
 
 };
 #endif
