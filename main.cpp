@@ -158,16 +158,6 @@ int main() {
     Allocate(&output_device, &output_disc_device, output.size(), outputDesc.size());
 
     toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
-    unsigned int offset = 0;
-    for (unsigned int i = 0; i < outputDesc.size(); i++) {
-        std::cout << "<"<< DebugPrim(outputDesc[i]) << ">, (";
-        for (unsigned int j = 0; j < (unsigned int)getPrimSize(outputDesc[i]); j++) {
-            std::cout << output[j+offset] << ", ";
-        }
-        offset += (unsigned int)getPrimSize(outputDesc[i]);
-    }
-
-    std::cout << std::endl;
     while (!glfwWindowShouldClose(window)) {
         //Imgui new frame
         ImGui_ImplOpenGL3_NewFrame();
@@ -178,11 +168,50 @@ int main() {
         //IMGUI PLAYGROUND
         {
             ImGui::Begin("Control Panel");
+            int offset = 0;
+            for (unsigned int i =0; i < outputDesc.size(); i++) {
+                switch (outputDesc[i]) {
+                    case PrimitiveType::CUBE:
+                        ImGui::Text("Cube");
+                        if (
+                        ImGui::DragFloat3(("Position##" +std::to_string(i)).c_str(), &output[offset],0.05f,-5.0f,5.0f) ||
+                        ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(), &output[offset + 3],0.05f,-5.0f,5.0f) ||
+                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), &output[offset + 6],0.05f,-5.0f,5.0f) ) {
+                            toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
+                        }
+                        break;
+                    case PrimitiveType::SPHERE:
+                        ImGui::Text("Sphere");
+                        if (
+                        ImGui::DragFloat3(("Position##"+std::to_string(i)).c_str(), &output[offset],0.05f,-5.0f,5.0f)||
+                        ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(), &output[offset + 3],0.05f,-5.0f,5.0f)||
+                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), &output[offset + 6],0.05f,-5.0f,5.0f)||
+                        ImGui::DragFloat(("Radius##"+std::to_string(i)).c_str(), &output[offset + 9],0.05f,-5.0f,5.0f)) {
+                            toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
+                        }
+                        break;
+                    case PrimitiveType::MANDELBROT:
+                        ImGui::Text("Mandelbulb");
+                        if (
+                        ImGui::DragFloat3(("Position##"+std::to_string(i)).c_str(), &output[offset],0.05f,-5.0f,5.0f)||
+                        ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(), &output[offset + 3],0.05f,-5.0f,5.0f)||
+                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), &output[offset + 6],0.05f,-5.0f,5.0f)||
+                        ImGui::DragFloat(("Exponent##"+std::to_string(i)).c_str(), &output[offset + 10],0.05f,-5.0f,5.0f)) {
+                            toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                offset += getPrimSize(outputDesc[i]);
+            }
             //ImGui::DragFloat3("Position",Fractal->getLocRef()->v,0.05f,-5.0f,5.0f);
             //ImGui::DragFloat3("Rotation",Fractal->getRotRef()->v,0.2f,-360.0f,360.0f);
             //ImGui::DragFloat("Exp",std::dynamic_pointer_cast<Mandelbulb>(Fractal)->getExponentRef(),.02f, 0,100.f);
             ImGui::End();
         }
+
+
         //Game Loop
         glClearColor(0.0f,0.2f,0.5f,1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
