@@ -13,7 +13,7 @@
 #include "ray_FFT.cuh"
 #include <cuda_runtime.h>
 
-void launchFragment(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const Primitive* scene);
+void launchFragment(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const float* output, const PrimitiveType* output_disc);
 
 #endif
 

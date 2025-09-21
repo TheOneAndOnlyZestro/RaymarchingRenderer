@@ -173,9 +173,9 @@ int main() {
         //IMGUI PLAYGROUND
         {
             ImGui::Begin("Control Panel");
-            ImGui::DragFloat3("Position",Fractal->getLocRef()->v,0.05f,-5.0f,5.0f);
-            ImGui::DragFloat3("Rotation",Fractal->getRotRef()->v,0.2f,-360.0f,360.0f);
-            ImGui::DragFloat("Exp",std::dynamic_pointer_cast<Mandelbulb>(Fractal)->getExponentRef(),.02f, 0,100.f);
+            //ImGui::DragFloat3("Position",Fractal->getLocRef()->v,0.05f,-5.0f,5.0f);
+            //ImGui::DragFloat3("Rotation",Fractal->getRotRef()->v,0.2f,-360.0f,360.0f);
+            //ImGui::DragFloat("Exp",std::dynamic_pointer_cast<Mandelbulb>(Fractal)->getExponentRef(),.02f, 0,100.f);
             ImGui::End();
         }
         //Game Loop

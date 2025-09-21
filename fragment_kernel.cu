@@ -26,7 +26,7 @@ std::string getNextRenderFileName(const std::string& directoryName) {
 
 #define MAX_STEPS 200
 __global__
-void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time) {
+void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const float* output, const PrimitiveType* output_disc) {
 
 
     const unsigned int x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -156,12 +156,12 @@ void Debugkernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int heigh
 
     }
 }
-void launchFragment(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const Primitive* scene) {
+void launchFragment(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const float* output, const PrimitiveType* output_disc) {
     dim3 ThreadsPerBlock(16, 16);
     dim3 GridDim((width + 15) / 16, (height + 15) / 16 );
 
     // cudaMalloc(&DP, sizeof(DevicePrimitive<Cube>));
     // cudaMemcpy(DP, &Conversion, sizeof(DevicePrimitive<Cube>), cudaMemcpyHostToDevice);
-    Debugkernel<<<GridDim, ThreadsPerBlock>>>(surf,width, height);
+    FragmentKernel<<<GridDim, ThreadsPerBlock>>>(surf,width, height, time, output, output_disc);
     cudaDeviceSynchronize();
 }

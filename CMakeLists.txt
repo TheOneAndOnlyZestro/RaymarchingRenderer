@@ -43,6 +43,8 @@
                 Primitive.cuh
                 ray_flatten_to_CUDA.cu
                 ray_flatten_to_CUDA.cuh
+                ray_Stack.cuh
+                ray_Stack.cu
         )
 
 
