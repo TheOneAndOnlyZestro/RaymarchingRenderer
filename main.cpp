@@ -195,34 +195,60 @@ int main() {
             ImGui::Begin("Control Panel");
 
             int offset = 0;
-            for (unsigned int i =0; i < outputDesc.size(); i++) {
-                switch (outputDesc[i]) {
+            for (unsigned int i =0; i < scene_objects.size(); i++) {
+                switch (scene_objects[i]->getType()) {
                     case PrimitiveType::CUBE:
                         ImGui::Text("Cube");
                         if (
-                        ImGui::DragFloat3(("Position##" +std::to_string(i)).c_str(), &output[offset],0.05f,-5.0f,5.0f) ||
-                        ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(), &output[offset + 3],0.05f,-5.0f,5.0f) ||
-                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), &output[offset + 6],0.05f,0.0f,5.0f) ) {
+                        ImGui::DragFloat3(("Position##" +std::to_string(i)).c_str(), scene_objects[i]->getLocRef()->v,0.05f,-5.0f,5.0f) ||
+                        ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(), scene_objects[i]->getRotRef()->v,0.05f,-5.0f,5.0f) ||
+                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), scene_objects[i]->getScaleRef()->v,0.05f,0.0f,5.0f) ) {
+                            output.clear();
+                            outputDesc.clear();
+                            ray::flatten(scene == nullptr ? cube_orig : scene , &output, &outputDesc);
                             toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
                         }
                         break;
                     case PrimitiveType::SPHERE:
                         ImGui::Text("Sphere");
                         if (
-                        ImGui::DragFloat3(("Position##"+std::to_string(i)).c_str(), &output[offset],0.05f,-5.0f,5.0f)||
-                        ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(), &output[offset + 3],0.05f,-5.0f,5.0f)||
-                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), &output[offset + 6],0.05f,0.0f,5.0f)||
-                        ImGui::DragFloat(("Radius##"+std::to_string(i)).c_str(), &output[offset + 9],0.05f,0.0f,5.0f)) {
+                        ImGui::DragFloat3(("Position##"+std::to_string(i)).c_str(), scene_objects[i]->getLocRef()->v,0.05f,-5.0f,5.0f)||
+                        ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(), scene_objects[i]->getRotRef()->v,0.05f,-5.0f,5.0f)||
+                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), scene_objects[i]->getScaleRef()->v,0.05f,0.0f,5.0f)||
+                        ImGui::DragFloat(("Radius##"+std::to_string(i)).c_str(), std::dynamic_pointer_cast<Sphere>(scene_objects[i])->getRadiusRef(),0.05f,0.0f,10.0f)) {
+                            output.clear();
+                            outputDesc.clear();
+                            ray::flatten(scene, &output, &outputDesc);
                             toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
                         }
                         break;
                     case PrimitiveType::MANDELBROT:
                         ImGui::Text("Mandelbulb");
                         if (
-                        ImGui::DragFloat3(("Position##"+std::to_string(i)).c_str(), &output[offset],0.05f,-5.0f,5.0f)||
-                        ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(), &output[offset + 3],0.5f,-360.0f,360.0f)||
-                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), &output[offset + 6],0.05f,-5.0f,5.0f)||
-                        ImGui::DragFloat(("Exponent##"+std::to_string(i)).c_str(), &output[offset + 10],0.05f,0.f,50.0f)) {
+                        ImGui::DragFloat3(("Position##"+std::to_string(i)).c_str(), scene_objects[i]->getLocRef()->v,0.05f,-5.0f,5.0f)||
+                        ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(),scene_objects[i]->getRotRef()->v,0.5f,-360.0f,360.0f)||
+                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), scene_objects[i]->getScaleRef()->v,0.05f,-5.0f,5.0f)||
+                        ImGui::DragFloat(("Exponent##"+std::to_string(i)).c_str(),std::dynamic_pointer_cast<Mandelbulb>(scene_objects[i])->getExponentRef(),0.05f,0.f,50.0f)) {
+                            output.clear();
+                            outputDesc.clear();
+                            ray::flatten(scene, &output, &outputDesc);
+                            toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
+                        }
+                        break;
+
+                    case PrimitiveType::LINE:
+                        ImGui::Text("Line");
+                        if (
+                        ImGui::DragFloat3(("Position##"+std::to_string(i)).c_str(), scene_objects[i]->getLocRef()->v,0.05f,-5.0f,5.0f)||
+                        ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(), scene_objects[i]->getRotRef()->v,0.5f,-360.0f,360.0f)||
+                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), scene_objects[i]->getScaleRef()->v,0.05f,-5.0f,5.0f)||
+                        ImGui::DragFloat3(("A##"+std::to_string(i)).c_str(), std::dynamic_pointer_cast<Line>(scene_objects[i])->getARef()->v,0.05f,-5.f,5.0f)||
+                        ImGui::DragFloat3(("B##"+std::to_string(i)).c_str(), std::dynamic_pointer_cast<Line>(scene_objects[i])->getBRef()->v,0.05f,-5.f,5.0f)||
+                        ImGui::DragFloat(("Radius##"+std::to_string(i)).c_str(), std::dynamic_pointer_cast<Line>(scene_objects[i])->getRadiusRef(),0.05f,0.f,10.0f)
+                        ) {
+                            output.clear();
+                            outputDesc.clear();
+                            ray::flatten(scene, &output, &outputDesc);
                             toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
                         }
                         break;
@@ -242,6 +268,11 @@ int main() {
             }
             if (ImGui::Button("Add Mandelbulb")) {
                 scene_objects.push_back(std::make_shared<Mandelbulb>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f), 8, 8.f));
+                addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveType::INTERSECT: PrimitiveType::UNION);
+            }
+            if (ImGui::Button("Add Line")) {
+                scene_objects.push_back(std::make_shared<Line>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f),
+                    ray::vec3(-0.5,0.f, -3.3f), ray::vec3(0.5,0.f, -3.3f), 0.2f) );
                 addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveType::INTERSECT: PrimitiveType::UNION);
             }
             ImGui::End();

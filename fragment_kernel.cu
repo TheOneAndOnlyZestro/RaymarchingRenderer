@@ -52,7 +52,11 @@ __device__ void parseExpression(const ray::vec3& p, const float* output, const P
                 d_values[dOffset] = currentData[0];
                 dOffset++;
                 break;
-
+            case PrimitiveType::LINE:
+                Line::LineSDFF(p,output+dataOffset, &s, currentData);
+                d_values[dOffset] = currentData[0];
+                dOffset++;
+                break;
             case PrimitiveType::UNION:
                 Union::UnionSDFF(distance_stack.pop(),distance_stack.pop(), &s, currentData);
                 break;
@@ -99,7 +103,11 @@ __device__ void parseExpressionNorm(const ray::vec3& p, const float* output, con
                 d_stack.push(d_values[dOffset]);
                 dOffset++;
                 break;
-
+            case PrimitiveType::LINE:
+                Line::LineSDFFNorm(p,output+dataOffset,&currentData);
+                d_stack.push(d_values[dOffset]);
+                dOffset++;
+                break;
             case PrimitiveType::UNION:
                 Union::UnionSDFFNorm(d_stack.pop(),d_stack.pop(), norm_stack.pop(), norm_stack.pop() ,&currentData, &currentD);
                 d_stack.push(currentD);

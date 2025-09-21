@@ -7,7 +7,7 @@
 
 enum class PrimitiveType {
     PRIMITIVE,
-    SPHERE, CUBE, MANDELBROT, //Objects
+    SPHERE, CUBE, MANDELBROT, LINE, //Objects
     BINARY_OPERATOR,
     UNION, INTERSECT    //Operators
 };
@@ -21,6 +21,8 @@ inline const char* DebugPrim(PrimitiveType p) {
             return "PrimitiveType::CUBE";
         case PrimitiveType::SPHERE:
             return "PrimitiveType::SPHERE";
+        case PrimitiveType::LINE:
+            return "PrimitiveType::LINE";
         case PrimitiveType::BINARY_OPERATOR:
             return "PrimitiveType::BINARY_OPERATOR";
         case PrimitiveType::MANDELBROT:
@@ -44,6 +46,8 @@ inline size_t getPrimSize(PrimitiveType p) {
             return 10;
         case PrimitiveType::MANDELBROT:
             return 11;
+        case PrimitiveType::LINE:
+            return 9 + 3*2 + 1;
         case PrimitiveType::BINARY_OPERATOR:
             return 9;
         case PrimitiveType::UNION:
@@ -197,7 +201,42 @@ public:
     inline bool isOperator() const override {return false;}
     ~Mandelbulb() override;
 };
+class Line : public Primitive {
+private:
+    ray::vec3 a;
+    ray::vec3 b;
+    float radius;
+public:
+    Line(const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale, const ray::vec3& _a, const ray::vec3& _b, const float _radius);
 
+    void getData(float* out, size_t* size) const override;
+    size_t getSize() const override;
+
+    PrimitiveType getType() const override;
+
+    float getRadius() const;
+    void setRadius(const float _radius);
+
+    ray::vec3 getA() const;
+    ray::vec3 getB() const;
+
+    ray::vec3* getARef();
+    ray::vec3* getBRef();
+    float* getRadiusRef();
+    void setA(const ray::vec3& _a);
+    void setB(const ray::vec3& _b);
+
+    __device__ __host__
+    static void LineSDF(const ray::vec3& p,const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale,
+    const ray::vec3& _a, const ray::vec3& _b, const float _radius,size_t* size, float* out);
+
+    __device__ __host__
+    static void LineSDFF(const ray::vec3& p,const float* input,size_t* size, float* out);
+
+    __device__ __host__
+    static void LineSDFFNorm(const ray::vec3& p, const float* input, ray::vec3* out);
+    inline bool isOperator() const override {return false;}
+};
 class BinaryOperator: public Primitive {
 private:
     std::shared_ptr<Primitive> p1;

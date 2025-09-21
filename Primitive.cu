@@ -262,6 +262,94 @@ void Mandelbulb::setExponent(const float _exponent) {
 
 Mandelbulb::~Mandelbulb() {}
 
+Line::Line(const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale, const ray::vec3 &_a,
+    const ray::vec3 &_b, const float _radius)
+:Primitive(_loc,_rot,_scale), a(_a), b(_b), radius(_radius)
+{}
+
+void Line::getData(float *out, size_t *size) const {
+    Primitive::getData(out, size);
+    memcpy_s(out + *size,sizeof(float) * 3 , a.v, sizeof(float) * 3);
+    *size += 3;
+    memcpy_s(out + *size,sizeof(float) * 3 , b.v, sizeof(float) * 3);
+    *size +=3;
+    out[*size] = (float)radius;
+    *size += 1;
+}
+
+size_t Line::getSize() const {
+    return getPrimSize(PrimitiveType::LINE);
+}
+
+PrimitiveType Line::getType() const {
+    return PrimitiveType::LINE;
+}
+
+float Line::getRadius() const {
+    return radius;
+}
+
+void Line::setRadius(const float _radius) {
+    radius = _radius;
+}
+
+ray::vec3 Line::getA() const {
+    return a;
+}
+
+ray::vec3 Line::getB() const {
+    return b;
+}
+
+ray::vec3 * Line::getARef() {
+    return &a;
+}
+
+ray::vec3 * Line::getBRef() {
+    return &b;
+}
+
+float * Line::getRadiusRef() {
+    return &radius;
+}
+
+void Line::setA(const ray::vec3 &_a) {
+    a = _a;
+}
+
+void Line::setB(const ray::vec3 &_b) {
+    b = _b;
+}
+__device__ __host__
+void Line::LineSDF(const ray::vec3 &p, const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale,
+    const ray::vec3 &_a, const ray::vec3 &_b, const float _radius,size_t* size, float* out) {
+    ray::vec3 pa = p - _a;
+    ray::vec3 ba = _b - _a;
+    float h = ray::clamp( ray::dot(pa,ba)/ray::dot(ba,ba), 0.0, 1.0 );
+    out[0] = ray::length( pa - ba*h ) - _radius;
+    *size=1;
+
+}
+
+void Line::LineSDFF(const ray::vec3 &p, const float *input, size_t *size, float *out) {
+    LineSDF(p,&input[0],&input[3],&input[6],&input[9],&input[12],input[15],size,out);
+}
+
+void Line::LineSDFFNorm(const ray::vec3 &p, const float *input, ray::vec3 *out) {
+    size_t size = 0;
+    float dxp,dxn,dyp,dyn,dzp,dzn;
+    LineSDF(p + ray::vec3(EPSILON,0.0f,0.0f),&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dxp);
+    LineSDF(p - ray::vec3(EPSILON,0.0f,0.0f),&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dxn);
+
+    LineSDF(p + ray::vec3(0.0f,EPSILON,0.0f),&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dyp);
+    LineSDF(p - ray::vec3(0.0f,EPSILON,0.0f),&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dyn);
+
+    LineSDF(p + ray::vec3(0.0f,0.0f,EPSILON),&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dzp);
+    LineSDF(p - ray::vec3(0.0f,0.0f,EPSILON),&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dzn);
+
+    *out = ray::normalize(ray::vec3(dxp-dxn, dyp-dyn, dzp-dzn) );
+}
+
 BinaryOperator::BinaryOperator(const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
     : p1(_p1), p2(_p2),
 Primitive( (_p1->getLoc() + _p2->getLoc())/2.f,
