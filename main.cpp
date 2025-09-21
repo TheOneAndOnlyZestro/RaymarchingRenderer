@@ -48,6 +48,35 @@ void main()
 
 const unsigned int width = 900;
 const unsigned int height = 900;
+
+void addObject(std::shared_ptr<Primitive>* scene, std::vector<float>* output,
+    std::vector<PrimitiveType>* outputDesc, float** output_device, PrimitiveType** output_disc_device,
+    const std::vector<std::shared_ptr<Primitive>>& scene_objects, const PrimitiveType& type = PrimitiveType::UNION) {
+
+    assert(type == PrimitiveType::UNION || type == PrimitiveType::INTERSECT);
+    if (*scene == nullptr) {
+        if (type == PrimitiveType::UNION) {
+        *scene = std::make_shared<Union>(scene_objects[0], scene_objects[1]);
+        }else {
+            *scene = std::make_shared<Intersect>(scene_objects[0], scene_objects[1]);
+        }
+    }else {
+        std::shared_ptr<Primitive> tempScene = *scene;
+        if (type == PrimitiveType::UNION) {
+            *scene = std::make_shared<Union>(tempScene, scene_objects[scene_objects.size()-1]);
+        }else {
+            *scene = std::make_shared<Intersect>(tempScene, scene_objects[scene_objects.size()-1]);
+        }
+    }
+    output->clear();
+    outputDesc->clear();
+    ray::flatten(*scene, output, outputDesc);
+    Free(*output_device,*output_disc_device);
+
+    Allocate(output_device, output_disc_device, output->size(), outputDesc->size());
+    toDevice(output->data(), outputDesc->data(), *output_device, *output_disc_device,
+        output->size(), outputDesc->size());
+}
 int main() {
 
 
@@ -133,31 +162,27 @@ int main() {
     glEnableVertexAttribArray(1);
 
     //Create a scene
-    std::shared_ptr<Primitive> Fractal =
-        std::make_shared<Mandelbulb>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(1.f,1.f,1.f), 8, 8);
+    // std::shared_ptr<Primitive> Fractal =
+    //     std::make_shared<Mandelbulb>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(1.f,1.f,1.f), 8, 8);
 
-    std::shared_ptr<Primitive> cube =
-        std::make_shared<Cube>(ray::vec3(0.2f,1.f,-3.3f), ray::vec3(), ray::vec3(0.7f,0.7f,1.0f));
+    std::vector<std::shared_ptr<Primitive>> scene_objects;
+    std::shared_ptr<Primitive> scene = nullptr;
+    std::shared_ptr<Primitive> cube_orig =
+        std::make_shared<Cube>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f));
 
-    std::shared_ptr<Primitive> cube1 =
-        std::make_shared<Cube>(ray::vec3(0.5f,0.7f,-3.3f), ray::vec3(), ray::vec3(0.2f,0.2f,0.2f));
-
-    std::shared_ptr<Primitive> cube2 =
-        std::make_shared<Cube>(ray::vec3(-0.5f,0.f,-2.1f), ray::vec3(), ray::vec3(0.5f,0.2f,0.4f));
-
-    //std::shared_ptr<Primitive> interScene = std::make_shared<Union>(Fractal,cube);
-    std::shared_ptr<Primitive> unionScene1 = std::make_shared<Intersect>(Fractal,cube);
-    std::shared_ptr<Primitive> unionScene2 = std::make_shared<Union>(unionScene1,cube2);
+    scene_objects.push_back(cube_orig);
 
     std::vector<float> output;
     std::vector<PrimitiveType> outputDesc;
-    ray::flatten(unionScene1, &output,&outputDesc);
+    ray::flatten(cube_orig, &output,&outputDesc);
 
     float* output_device;
     PrimitiveType* output_disc_device;
     Allocate(&output_device, &output_disc_device, output.size(), outputDesc.size());
 
     toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
+
+    bool intersect = false;
     while (!glfwWindowShouldClose(window)) {
         //Imgui new frame
         ImGui_ImplOpenGL3_NewFrame();
@@ -168,6 +193,7 @@ int main() {
         //IMGUI PLAYGROUND
         {
             ImGui::Begin("Control Panel");
+
             int offset = 0;
             for (unsigned int i =0; i < outputDesc.size(); i++) {
                 switch (outputDesc[i]) {
@@ -176,7 +202,7 @@ int main() {
                         if (
                         ImGui::DragFloat3(("Position##" +std::to_string(i)).c_str(), &output[offset],0.05f,-5.0f,5.0f) ||
                         ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(), &output[offset + 3],0.05f,-5.0f,5.0f) ||
-                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), &output[offset + 6],0.05f,-5.0f,5.0f) ) {
+                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), &output[offset + 6],0.05f,0.0f,5.0f) ) {
                             toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
                         }
                         break;
@@ -185,8 +211,8 @@ int main() {
                         if (
                         ImGui::DragFloat3(("Position##"+std::to_string(i)).c_str(), &output[offset],0.05f,-5.0f,5.0f)||
                         ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(), &output[offset + 3],0.05f,-5.0f,5.0f)||
-                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), &output[offset + 6],0.05f,-5.0f,5.0f)||
-                        ImGui::DragFloat(("Radius##"+std::to_string(i)).c_str(), &output[offset + 9],0.05f,-5.0f,5.0f)) {
+                        ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), &output[offset + 6],0.05f,0.0f,5.0f)||
+                        ImGui::DragFloat(("Radius##"+std::to_string(i)).c_str(), &output[offset + 9],0.05f,0.0f,5.0f)) {
                             toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
                         }
                         break;
@@ -194,9 +220,9 @@ int main() {
                         ImGui::Text("Mandelbulb");
                         if (
                         ImGui::DragFloat3(("Position##"+std::to_string(i)).c_str(), &output[offset],0.05f,-5.0f,5.0f)||
-                        ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(), &output[offset + 3],0.05f,-5.0f,5.0f)||
+                        ImGui::DragFloat3(("Rotation##"+std::to_string(i)).c_str(), &output[offset + 3],0.5f,-360.0f,360.0f)||
                         ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), &output[offset + 6],0.05f,-5.0f,5.0f)||
-                        ImGui::DragFloat(("Exponent##"+std::to_string(i)).c_str(), &output[offset + 10],0.05f,-5.0f,5.0f)) {
+                        ImGui::DragFloat(("Exponent##"+std::to_string(i)).c_str(), &output[offset + 10],0.05f,0.f,50.0f)) {
                             toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
                         }
                         break;
@@ -205,9 +231,19 @@ int main() {
                 }
                 offset += getPrimSize(outputDesc[i]);
             }
-            //ImGui::DragFloat3("Position",Fractal->getLocRef()->v,0.05f,-5.0f,5.0f);
-            //ImGui::DragFloat3("Rotation",Fractal->getRotRef()->v,0.2f,-360.0f,360.0f);
-            //ImGui::DragFloat("Exp",std::dynamic_pointer_cast<Mandelbulb>(Fractal)->getExponentRef(),.02f, 0,100.f);
+            ImGui::Checkbox("Intersect", &intersect);
+            if (ImGui::Button("Add Cube")) {
+                scene_objects.push_back(std::make_shared<Cube>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f)));
+                addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveType::INTERSECT: PrimitiveType::UNION);
+            }
+            if (ImGui::Button("Add Sphere")) {
+                scene_objects.push_back(std::make_shared<Sphere>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f), 0.5f));
+                addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveType::INTERSECT: PrimitiveType::UNION);
+            }
+            if (ImGui::Button("Add Mandelbulb")) {
+                scene_objects.push_back(std::make_shared<Mandelbulb>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f), 8, 8.f));
+                addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveType::INTERSECT: PrimitiveType::UNION);
+            }
             ImGui::End();
         }
 
