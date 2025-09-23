@@ -56,16 +56,16 @@ void addObject(std::shared_ptr<Primitive>* scene, std::vector<float>* output,
     assert(type == PrimitiveType::UNION || type == PrimitiveType::INTERSECT);
     if (*scene == nullptr) {
         if (type == PrimitiveType::UNION) {
-        *scene = std::make_shared<Union>(scene_objects[0], scene_objects[1]);
+        *scene = std::make_shared<Union>(1.f,scene_objects[0], scene_objects[1]);
         }else {
-            *scene = std::make_shared<Intersect>(scene_objects[0], scene_objects[1]);
+            *scene = std::make_shared<Intersect>(1.f,scene_objects[0], scene_objects[1]);
         }
     }else {
         std::shared_ptr<Primitive> tempScene = *scene;
         if (type == PrimitiveType::UNION) {
-            *scene = std::make_shared<Union>(tempScene, scene_objects[scene_objects.size()-1]);
+            *scene = std::make_shared<Union>(1.f,tempScene, scene_objects[scene_objects.size()-1]);
         }else {
-            *scene = std::make_shared<Intersect>(tempScene, scene_objects[scene_objects.size()-1]);
+            *scene = std::make_shared<Intersect>(1.f,tempScene, scene_objects[scene_objects.size()-1]);
         }
     }
     output->clear();
@@ -167,14 +167,14 @@ int main() {
 
     std::vector<std::shared_ptr<Primitive>> scene_objects;
     std::shared_ptr<Primitive> scene = nullptr;
-    std::shared_ptr<Primitive> cube_orig =
-        std::make_shared<Cube>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f));
+    std::shared_ptr<Primitive> light =
+        std::make_shared<Sphere>(0.f, ray::vec3(0.f,0.f,0.0f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f), 0.5f);
 
-    scene_objects.push_back(cube_orig);
+    scene_objects.push_back(light);
 
     std::vector<float> output;
     std::vector<PrimitiveType> outputDesc;
-    ray::flatten(cube_orig, &output,&outputDesc);
+    ray::flatten(light, &output,&outputDesc);
 
     float* output_device;
     PrimitiveType* output_disc_device;
@@ -183,6 +183,13 @@ int main() {
     toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
 
     bool intersect = false;
+
+    ray::vec3 lightSource(0.f,0.f,-5.f);
+    ray::vec3* lightSourceDevice;
+    AllocateLightSource(&lightSourceDevice);
+    UpdateDeviceLightSource(&lightSource, lightSourceDevice);
+
+
     while (!glfwWindowShouldClose(window)) {
         //Imgui new frame
         ImGui_ImplOpenGL3_NewFrame();
@@ -193,9 +200,17 @@ int main() {
         //IMGUI PLAYGROUND
         {
             ImGui::Begin("Control Panel");
-
-            int offset = 0;
+            ImGui::Text("LightSource");
+            if (ImGui::DragFloat3("Position", &lightSource.x, 0.01f, -5.0f,5.0f)) {
+                UpdateDeviceLightSource(&lightSource, lightSourceDevice);
+                //light->setLoc(lightSource);
+                // //ray::flatten( light, &output, &outputDesc);
+                // //toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
+            }
             for (unsigned int i =0; i < scene_objects.size(); i++) {
+                //if ( scene_objects[i]->getID() == 0.f ) {
+                //    continue;
+                //}
                 switch (scene_objects[i]->getType()) {
                     case PrimitiveType::CUBE:
                         ImGui::Text("Cube");
@@ -205,11 +220,12 @@ int main() {
                         ImGui::DragFloat3(("Scale##"+std::to_string(i)).c_str(), scene_objects[i]->getScaleRef()->v,0.05f,0.0f,5.0f) ) {
                             output.clear();
                             outputDesc.clear();
-                            ray::flatten(scene == nullptr ? cube_orig : scene , &output, &outputDesc);
+                            ray::flatten( scene, &output, &outputDesc);
                             toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
                         }
                         break;
                     case PrimitiveType::SPHERE:
+
                         ImGui::Text("Sphere");
                         if (
                         ImGui::DragFloat3(("Position##"+std::to_string(i)).c_str(), scene_objects[i]->getLocRef()->v,0.05f,-5.0f,5.0f)||
@@ -218,7 +234,7 @@ int main() {
                         ImGui::DragFloat(("Radius##"+std::to_string(i)).c_str(), std::dynamic_pointer_cast<Sphere>(scene_objects[i])->getRadiusRef(),0.05f,0.0f,10.0f)) {
                             output.clear();
                             outputDesc.clear();
-                            ray::flatten(scene, &output, &outputDesc);
+                            ray::flatten(scene == nullptr ? light : scene, &output, &outputDesc);
                             toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
                         }
                         break;
@@ -255,23 +271,25 @@ int main() {
                     default:
                         break;
                 }
-                offset += getPrimSize(outputDesc[i]);
             }
             ImGui::Checkbox("Intersect", &intersect);
             if (ImGui::Button("Add Cube")) {
-                scene_objects.push_back(std::make_shared<Cube>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f)));
+                scene_objects.push_back(std::make_shared<Cube>(1.f,ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f)));
                 addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveType::INTERSECT: PrimitiveType::UNION);
+                for (int i =0; i < output.size(); i++) {
+                    printf("output[%d] = %f ", i, output[i]);
+                }
             }
             if (ImGui::Button("Add Sphere")) {
-                scene_objects.push_back(std::make_shared<Sphere>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f), 0.5f));
+                scene_objects.push_back(std::make_shared<Sphere>(1.f,ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f), 0.5f));
                 addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveType::INTERSECT: PrimitiveType::UNION);
             }
             if (ImGui::Button("Add Mandelbulb")) {
-                scene_objects.push_back(std::make_shared<Mandelbulb>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f), 8, 8.f));
+                scene_objects.push_back(std::make_shared<Mandelbulb>(1.f,ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f), 8, 8.f));
                 addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveType::INTERSECT: PrimitiveType::UNION);
             }
             if (ImGui::Button("Add Line")) {
-                scene_objects.push_back(std::make_shared<Line>(ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f),
+                scene_objects.push_back(std::make_shared<Line>(1.f,ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f),
                     ray::vec3(-0.5,0.f, -3.3f), ray::vec3(0.5,0.f, -3.3f), 0.2f) );
                 addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveType::INTERSECT: PrimitiveType::UNION);
             }
@@ -295,7 +313,7 @@ int main() {
         cudaSurfaceObject_t surf = 0;
         cudaCreateSurfaceObject(&surf, &resourceDesc);
 
-        launchFragment(surf, width,height,glfwGetTime(),output_device,output.size(), output_disc_device, outputDesc.size());
+        launchFragment(surf, width,height,glfwGetTime(),output_device,output.size(), output_disc_device, outputDesc.size(), lightSourceDevice);
 
         cudaDestroySurfaceObject(surf);
         cudaGraphicsUnmapResources(1,&cudaRes, 0);
@@ -318,6 +336,7 @@ int main() {
     ImGui::DestroyContext();
 
     Free(output_device, output_disc_device);
+    FreeDeviceLightSource(lightSourceDevice);
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;

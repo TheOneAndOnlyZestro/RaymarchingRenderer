@@ -2,6 +2,7 @@
 
 //Do it on the kernel
 
+
 std::string getNextRenderFileName(const std::string& directoryName) {
     std::filesystem::path output_dir = directoryName;
 
@@ -27,6 +28,7 @@ std::string getNextRenderFileName(const std::string& directoryName) {
 #define MAX_STEPS 200
 
 __device__ void parseExpression(const ray::vec3& p, const float* output, const PrimitiveType* output_disc, float* data, float* d_values,const unsigned int output_size,const unsigned int outputDiscSize) {
+
     //We want to parse the postfix expression at hand using a stack
     ray::Stack<float,20> distance_stack;
     float currentData[1];
@@ -36,24 +38,38 @@ __device__ void parseExpression(const ray::vec3& p, const float* output, const P
     for (unsigned int i = 0; i < outputDiscSize; i++) {
         switch (output_disc[i]) {
             case PrimitiveType::CUBE:
-                Cube::CubeSDFF(p,output+dataOffset, &s, currentData);
+                //Debug
+                // if (threadIdx.x + blockIdx.x * blockDim.x  == 0 && threadIdx.y + blockIdx.y * blockDim.y  == 0) {
+                //     printf("DEBUG CUBE PIXEL(0,0) \n");
+                //     for (unsigned int i = 0; i < getPrimSize(PrimitiveType::CUBE) - 1; i++) {
+                //         printf("output = %f\n", (output+dataOffset+1)[i]);
+                //     }
+                // }
+                Cube::CubeSDFF(p,output+dataOffset+1, &s, currentData);
                 d_values[dOffset] = currentData[0];
                 dOffset++;
                 break;
 
             case PrimitiveType::SPHERE:
-                Sphere::SphereSDFF(p,output+dataOffset, &s, currentData);
+                //Debug
+                // printf("DEBUG SPHERE PIXEL(0,0) \n");
+                // if (threadIdx.x + blockIdx.x * blockDim.x  == 0 && threadIdx.y + blockIdx.y * blockDim.y  == 0) {
+                //     for (unsigned int i = 0; i < getPrimSize(PrimitiveType::SPHERE) - 1; i++) {
+                //         printf("output = %f\n", (output+dataOffset+1)[i]);
+                //     }
+                // }
+                Sphere::SphereSDFF(p,output+dataOffset+1, &s, currentData);
                 d_values[dOffset] = currentData[0];
                 dOffset++;
                 break;
 
             case PrimitiveType::MANDELBROT:
-                Mandelbulb::MandelbulbSDFF(p,output+dataOffset, &s, currentData);
+                Mandelbulb::MandelbulbSDFF(p,output+dataOffset+1, &s, currentData);
                 d_values[dOffset] = currentData[0];
                 dOffset++;
                 break;
             case PrimitiveType::LINE:
-                Line::LineSDFF(p,output+dataOffset, &s, currentData);
+                Line::LineSDFF(p,output+dataOffset+1, &s, currentData);
                 d_values[dOffset] = currentData[0];
                 dOffset++;
                 break;
@@ -87,24 +103,24 @@ __device__ void parseExpressionNorm(const ray::vec3& p, const float* output, con
     for (unsigned int i = 0; i < outputDiscSize; i++) {
         switch (output_disc[i]) {
             case PrimitiveType::CUBE:
-                Cube::CubeSDFFNorm(p,output+dataOffset,&currentData);
+                Cube::CubeSDFFNorm(p,output+dataOffset+1,&currentData);
                 d_stack.push(d_values[dOffset]);
                 dOffset++;
                 break;
 
             case PrimitiveType::SPHERE:
-                Sphere::SphereSDFFNorm(p,output+dataOffset, &currentData);
+                Sphere::SphereSDFFNorm(p,output+dataOffset+1, &currentData);
                 d_stack.push(d_values[dOffset]);
                 dOffset++;
                 break;
 
             case PrimitiveType::MANDELBROT:
-                Mandelbulb::MandelbulbSDFFNorm(p,output+dataOffset,&currentData);
+                Mandelbulb::MandelbulbSDFFNorm(p,output+dataOffset+1,&currentData);
                 d_stack.push(d_values[dOffset]);
                 dOffset++;
                 break;
             case PrimitiveType::LINE:
-                Line::LineSDFFNorm(p,output+dataOffset,&currentData);
+                Line::LineSDFFNorm(p,output+dataOffset+1,&currentData);
                 d_stack.push(d_values[dOffset]);
                 dOffset++;
                 break;
@@ -129,10 +145,12 @@ __device__ void parseExpressionNorm(const ray::vec3& p, const float* output, con
     *data = norm_stack.pop();
 }
 __global__
-void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const float* output, const unsigned int output_size, const PrimitiveType* output_disc, const unsigned int outputDiscSize) {
-    //printf("%f",output[0]);
+void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const float* output, const unsigned int output_size, const PrimitiveType* output_disc, const unsigned int outputDiscSize, const ray::vec3* lightSource) {
     const unsigned int x = threadIdx.x + blockIdx.x * blockDim.x;
     const unsigned int y = threadIdx.y + blockIdx.y * blockDim.y;
+
+
+    //printf("\n END \n");
 
     float aspectRatio = (float)width / (float)height;
 
@@ -140,7 +158,6 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
     float v = ((((float)(height - y)/height) * 2.0f) - 1.0f);
 
     ray::vec3 ro(0.f,0.f,-5.0f);
-    ray::vec3 lightSource(0.f,4.f, -5.5f);
     ray::vec3 rd(u,v,1.0f);
     rd = ray::normalize(rd);
 
@@ -175,7 +192,7 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
         parseExpressionNorm(p, output, output_disc, &normal, dValues, output_size ,outputDiscSize);
         //we hit a surface, calculate its normal
         //calculate dot product between normal and a light source
-        ray::vec3 incident = ray::normalize(lightSource - p);
+        ray::vec3 incident = ray::normalize(*lightSource - p);
         diffuse = ray::dot(incident, normal) * intensity;
         ambient = 0.7f;
 
@@ -198,6 +215,7 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
     //fcolor = color * diffuse;
     ray::vec3 debug(val,val,val);
     //fcolor = debug;
+    //printf("%f", data);
     if (x < width && y < height) {
         // image[(y * width + x) * 3 + 0] = (unsigned int)(fcolor.r * 255.0f);
         // image[(y * width + x) * 3 + 1] = (unsigned int)(fcolor.g * 255.0f);
@@ -250,11 +268,10 @@ void Debugkernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int heigh
 
     }
 }
-void launchFragment(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const float* output,const unsigned int output_size, const PrimitiveType* output_disc, const unsigned int outputDiscSize) {
+void launchFragment(cudaSurfaceObject_t surf,unsigned int width, unsigned int height, float time, const float* output,const unsigned int output_size, const PrimitiveType* output_disc, const unsigned int outputDiscSize, const ray::vec3* lightSource) {
     dim3 ThreadsPerBlock(16, 16);
     dim3 GridDim((width + 15) / 16, (height + 15) / 16 );
-
-    FragmentKernel<<<GridDim, ThreadsPerBlock>>>(surf,width, height, time, output,output_size, output_disc, outputDiscSize);
+    FragmentKernel<<<GridDim, ThreadsPerBlock>>>(surf,width, height, time, output,output_size, output_disc, outputDiscSize, lightSource);
     cudaDeviceSynchronize();
 
 }
@@ -270,4 +287,16 @@ void Free(float* output_device, PrimitiveType* output_disc_device) {
 void toDevice(float* output_host, PrimitiveType* output_disc_host,float* output_device, PrimitiveType* output_disc_device, unsigned int output_size, unsigned int outputDiscSize) {
     cudaMemcpy(output_device, output_host, sizeof(float) * output_size, cudaMemcpyHostToDevice);
     cudaMemcpy(output_disc_device, output_disc_host, sizeof(PrimitiveType) * outputDiscSize, cudaMemcpyHostToDevice);
+}
+
+void AllocateLightSource(ray::vec3** LightSourceDevice) {
+    cudaMalloc(LightSourceDevice, sizeof(float) * 3);
+}
+
+void UpdateDeviceLightSource(const ray::vec3* lightSource, ray::vec3* LightSourceDevice) {
+    cudaMemcpy(LightSourceDevice, lightSource, sizeof(float) * 3, cudaMemcpyHostToDevice);
+}
+
+void FreeDeviceLightSource(ray::vec3* LightSourceDevice) {
+    cudaFree(LightSourceDevice);
 }

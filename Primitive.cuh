@@ -39,21 +39,21 @@ __device__ __host__
 inline size_t getPrimSize(PrimitiveType p) {
     switch (p) {
         case PrimitiveType::PRIMITIVE:
-            return 9;
+            return 9 +1;
         case PrimitiveType::CUBE:
-            return 9;
+            return 9 + 1;
         case PrimitiveType::SPHERE:
-            return 10;
+            return 10 + 1;
         case PrimitiveType::MANDELBROT:
-            return 11;
+            return 11 + 1;
         case PrimitiveType::LINE:
-            return 9 + 3*2 + 1;
+            return 9 + 3*2 + 1 + 1;
         case PrimitiveType::BINARY_OPERATOR:
-            return 9;
+            return 9 + 1;
         case PrimitiveType::UNION:
-            return 9;
+            return 9 + 1;
         case PrimitiveType::INTERSECT:
-            return 9;
+            return 9 + 1;
         default:
             return 0;
     }
@@ -62,17 +62,19 @@ class Primitive {
 private:
     union {
         struct {
+            float id;
             ray::vec3 loc;
             ray::vec3 rot;
             ray::vec3 scale;
         };
         struct {
-            float data[9];
+            float data[10];
         };
     };
+
 public:
 
-    Primitive(const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale);
+    Primitive(float _id, const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale);
 
     //Accessor functions
     virtual ray::vec3 getLoc() const;
@@ -100,7 +102,8 @@ public:
     virtual void setRot(const ray::vec3& rot);
     
     virtual void setScale(const ray::vec3& scale);
-    
+
+    float getID() const;
     virtual ~Primitive();
 
 };
@@ -110,7 +113,7 @@ class Sphere : public Primitive {
     float radius;
     public:
     
-    Sphere(const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale, const float _radius);
+    Sphere(float id,const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale, const float _radius);
 
     virtual PrimitiveType getType() const override;
 
@@ -141,7 +144,7 @@ class Sphere : public Primitive {
 class Cube : public Primitive {
 public:
     
-    Cube(const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale);
+    Cube(float id,const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale);
 
     virtual PrimitiveType getType() const override;
 
@@ -166,7 +169,7 @@ private:
     float exponent;
 public:
     
-    Mandelbulb(const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale, const unsigned int _iterations, const float _exponent);
+    Mandelbulb(float id,const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale, const unsigned int _iterations, const float _exponent);
 
     //Accessor Functions
     
@@ -207,7 +210,7 @@ private:
     ray::vec3 b;
     float radius;
 public:
-    Line(const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale, const ray::vec3& _a, const ray::vec3& _b, const float _radius);
+    Line(float id,const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale, const ray::vec3& _a, const ray::vec3& _b, const float _radius);
 
     void getData(float* out, size_t* size) const override;
     size_t getSize() const override;
@@ -243,7 +246,7 @@ private:
     std::shared_ptr<Primitive> p2;
 public:
 
-    BinaryOperator(const std::shared_ptr<Primitive>& _p1,const std::shared_ptr<Primitive>& _p2);
+    BinaryOperator(float id,const std::shared_ptr<Primitive>& _p1,const std::shared_ptr<Primitive>& _p2);
     virtual PrimitiveType getType() const override;
     inline bool isOperator() const override {return true;}
     std::shared_ptr<Primitive> getP1() const;
@@ -251,7 +254,7 @@ public:
 };
 class Union : public BinaryOperator {
     public:
-    Union(const std::shared_ptr<Primitive>& _p1,const std::shared_ptr<Primitive>& _p2);
+    Union(float id,const std::shared_ptr<Primitive>& _p1,const std::shared_ptr<Primitive>& _p2);
     virtual PrimitiveType getType() const override;
 
     __device__ __host__
@@ -264,7 +267,7 @@ class Union : public BinaryOperator {
 class Intersect : public BinaryOperator {
 public:
     __device__ __host__
-    Intersect(const std::shared_ptr<Primitive>& _p1,const std::shared_ptr<Primitive>& _p2);
+    Intersect(float id,const std::shared_ptr<Primitive>& _p1,const std::shared_ptr<Primitive>& _p2);
     virtual PrimitiveType getType() const override;
 
     __device__ __host__

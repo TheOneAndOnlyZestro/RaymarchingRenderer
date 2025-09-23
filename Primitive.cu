@@ -1,22 +1,7 @@
 #include "Primitive.cuh"
 
 //Parent Primitive
-Primitive::Primitive(const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale): loc(_loc), rot(_rot), scale(_scale)  {};
-
-// ray::vec3 Primitive::Normal(const ray::vec3 &p) const{
-//     float dxp,dxn,dyp,dyn,dzp,dzn;
-//     SDF(p + ray::vec3(EPSILON,0.0f,0.0f),nullptr,&dxp);
-//     SDF(p - ray::vec3(EPSILON,0.0f,0.0f),nullptr,&dxn);
-//
-//     SDF(p + ray::vec3(0.0f,EPSILON,0.0f),nullptr,&dyp);
-//     SDF(p - ray::vec3(0.0f,EPSILON,0.0f),nullptr,&dyn);
-//
-//     SDF(p + ray::vec3(0.0f,0.0f,EPSILON),nullptr,&dzp);
-//     SDF(p - ray::vec3(0.0f,0.0f,EPSILON),nullptr,&dzn);
-//
-//
-//     return ray::normalize(ray::vec3(dxp-dxn, dyp-dyn, dzp-dzn) );
-//     }
+Primitive::Primitive(float _id, const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale): loc(_loc), rot(_rot), scale(_scale), id(_id) {};
 
 ray::vec3 Primitive::getLoc() const {
     return loc;
@@ -33,13 +18,13 @@ ray::vec3 Primitive::getScale() const {
 
 void Primitive::getData(float *out, size_t *size) const{
     if (size!=nullptr)
-        *size = 9;
+        *size = 10;
     if (out!=nullptr)
-        memcpy_s(out,sizeof(float) * 9 ,data, sizeof(float) * 9);
+        memcpy_s(out,sizeof(float) * 10 ,data, sizeof(float) * 10);
 }
 
 size_t Primitive::getSize() const {
-    return 9;
+    return 10;
 }
 
 ray::vec3 * Primitive::getLocRef() {
@@ -66,6 +51,10 @@ void Primitive::setScale(const ray::vec3 &scale) {
     this->scale = scale;
 }
 
+float Primitive::getID() const {
+    return id;
+}
+
 Primitive::~Primitive() {}
 
 __device__ __host__
@@ -78,6 +67,9 @@ void Cube::CubeSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &ro
 }
 __device__ __host__
 void Cube::CubeSDFF(const ray::vec3& p, const float *input, size_t *size, float *out) {
+
+    //printf("LOC: (%f,%f,%f), ROT: (%f,%f,%f), SCALE:(%f,%f,%f) \n", input[0], input[1], input[2], input[3], input[4], input[5], input[6], input[7], input[8]);
+
     CubeSDF(p, &input[0], &input[3], &input[6], size,out);
 }
 
@@ -100,13 +92,18 @@ void Cube::CubeSDFFNorm(const ray::vec3 &p, const float *input, ray::vec3 *out) 
 __device__ __host__
 void Sphere::SphereSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
                        const float radius, size_t *size, float *out) {
+
     if (size != nullptr) *size = 1;
     out[0]=ray::length(p-loc) - radius;
+    //printf("%f\n", out[0]);
 }
 
 
 __device__ __host__
 void Sphere::SphereSDFF(const ray::vec3& p,const float *input, size_t *size, float *out) {
+
+    //printf("LOC: (%f,%f,%f), ROT: (%f,%f,%f), SCALE:(%f,%f,%f), RAD: %f \n", input[0], input[1], input[2], input[3], input[4], input[5], input[6], input[7], input[8], input[9]);
+
     SphereSDF(p, &input[0], &input[3], &input[6], input[9], size, out);
 }
 __device__ __host__
@@ -175,8 +172,8 @@ void Mandelbulb::MandelbulbSDFFNorm(const ray::vec3 &p, const float *input, ray:
 }
 
 //Sphere SDF
-Sphere::Sphere(const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale, const float _radius)
-    :Primitive(_loc, _rot, _scale), radius(_radius) {}
+Sphere::Sphere(float id,const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale, const float _radius)
+    :Primitive(id,_loc, _rot, _scale), radius(_radius) {}
 
 PrimitiveType Sphere::getType() const {
     return PrimitiveType::SPHERE;
@@ -207,8 +204,8 @@ void Sphere::setRadius(const float _radius) {
 
 Sphere::~Sphere() {}
 
-Cube::Cube(const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale)
-:Primitive(_loc,_rot,_scale) {}
+Cube::Cube(float id,const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale)
+:Primitive(id,_loc,_rot,_scale) {}
 
 PrimitiveType Cube::getType() const {
     return PrimitiveType::CUBE;
@@ -217,9 +214,9 @@ PrimitiveType Cube::getType() const {
 Cube::~Cube() {
 }
 
-Mandelbulb::Mandelbulb(const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale,
+Mandelbulb::Mandelbulb(float id,const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale,
     const unsigned int _iterations, const float _exponent)
-        :Primitive(_loc,_rot,_scale), iterations(_iterations), exponent(_exponent){}
+        :Primitive(id,_loc,_rot,_scale), iterations(_iterations), exponent(_exponent){}
 
 unsigned int Mandelbulb::getIterations() const {
     return iterations;
@@ -262,9 +259,9 @@ void Mandelbulb::setExponent(const float _exponent) {
 
 Mandelbulb::~Mandelbulb() {}
 
-Line::Line(const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale, const ray::vec3 &_a,
+Line::Line(float _id,const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale, const ray::vec3 &_a,
     const ray::vec3 &_b, const float _radius)
-:Primitive(_loc,_rot,_scale), a(_a), b(_b), radius(_radius)
+:Primitive(_id, _loc,_rot,_scale), a(_a), b(_b), radius(_radius)
 {}
 
 void Line::getData(float *out, size_t *size) const {
@@ -350,9 +347,9 @@ void Line::LineSDFFNorm(const ray::vec3 &p, const float *input, ray::vec3 *out) 
     *out = ray::normalize(ray::vec3(dxp-dxn, dyp-dyn, dzp-dzn) );
 }
 
-BinaryOperator::BinaryOperator(const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
+BinaryOperator::BinaryOperator(float id,const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
     : p1(_p1), p2(_p2),
-Primitive( (_p1->getLoc() + _p2->getLoc())/2.f,
+Primitive(id, (_p1->getLoc() + _p2->getLoc())/2.f,
     ray::vec3(),ray::vec3(1.f,1.f,1.f)) {}
 
 PrimitiveType BinaryOperator::getType() const {
@@ -367,8 +364,8 @@ std::shared_ptr<Primitive> BinaryOperator::getP2() const {
     return p2;
 }
 
-Union::Union(const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
-    :BinaryOperator(_p1,_p2){}
+Union::Union(float id,const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
+    :BinaryOperator(id,_p1,_p2){}
 
 PrimitiveType Union::getType() const {
     return PrimitiveType::UNION;
@@ -389,8 +386,8 @@ void Union::UnionSDFFNorm(float d1, float d2, const ray::vec3 &n1, const ray::ve
     }
 }
 
-Intersect::Intersect(const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
-:BinaryOperator(_p1,_p2) {}
+Intersect::Intersect(float id,const std::shared_ptr<Primitive> &_p1, const std::shared_ptr<Primitive> &_p2)
+:BinaryOperator(id,_p1,_p2) {}
 
 PrimitiveType Intersect::getType() const {
     return PrimitiveType::INTERSECT;
