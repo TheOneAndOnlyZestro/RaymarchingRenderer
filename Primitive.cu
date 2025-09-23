@@ -24,7 +24,7 @@ void Primitive::getData(float *out, size_t *size) const{
 }
 
 size_t Primitive::getSize() const {
-    return getPrimSize(PrimitiveType::PrimitiveType::CUBE);
+    return getPrimSize(PrimitiveType::CUBE);
 }
 
 ray::vec3 * Primitive::getLocRef() {
