@@ -24,7 +24,7 @@ void Primitive::getData(float *out, size_t *size) const{
 }
 
 size_t Primitive::getSize() const {
-    return 10;
+    return getPrimSize(PrimitiveType::PrimitiveType::CUBE);
 }
 
 ray::vec3 * Primitive::getLocRef() {
@@ -186,7 +186,7 @@ void Sphere::getData(float *out, size_t *size) const {
 }
 
 size_t Sphere::getSize() const {
-    return Primitive::getSize() + 1;
+    return getPrimSize(PrimitiveType::SPHERE);
 }
 
 
@@ -238,7 +238,7 @@ void Mandelbulb::getData(float *out, size_t *size) const {
 }
 
 size_t Mandelbulb::getSize() const {
-    return Primitive::getSize() + 2;
+    return getPrimSize(PrimitiveType::MANDELBROT);
 }
 
 PrimitiveType Mandelbulb::getType() const {
