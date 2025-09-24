@@ -58,11 +58,11 @@ float Primitive::getID() const {
 Primitive::~Primitive() {}
 
 __device__ __host__
-void Cube::CubeSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
+void Cube::CubeSDF(const ray::vec3& p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
     size_t *size, float *out) {
 
     if (size != nullptr) *size = 1;
-    ray::vec3 q(abs(p - loc) - scale);
+    ray::vec3 q(abs( ray::ApplyTransform(p,loc,rot)) - scale);
     out[0] = ray::length(ray::max(q, 0.f)) + min( ray::compMax(q) , 0.0);
 }
 __device__ __host__
@@ -76,25 +76,34 @@ void Cube::CubeSDFF(const ray::vec3& p, const float *input, size_t *size, float 
 void Cube::CubeSDFFNorm(const ray::vec3 &p, const float *input, ray::vec3 *out) {
     size_t size =0;
     float dxp,dxn,dyp,dyn,dzp,dzn;
-    CubeSDF(p + ray::vec3(EPSILON,0.0f,0.0f),&input[0], &input[3], &input[6],&size,&dxp);
-    CubeSDF(p - ray::vec3(EPSILON,0.0f,0.0f),&input[0], &input[3], &input[6],&size,&dxn);
+    ray::vec3 pxp = p + ray::vec3(EPSILON,0.0f,0.0f);
+    ray::vec3 pxn = p - ray::vec3(EPSILON,0.0f,0.0f);
 
-    CubeSDF(p + ray::vec3(0.0f,EPSILON,0.0f),&input[0], &input[3], &input[6],&size,&dyp);
-    CubeSDF(p - ray::vec3(0.0f,EPSILON,0.0f),&input[0], &input[3], &input[6], &size,&dyn);
+    ray::vec3 pyp = p + ray::vec3(0.0f,EPSILON,0.0f);
+    ray::vec3 pyn = p - ray::vec3(0.0f,EPSILON,0.0f);
 
-    CubeSDF(p + ray::vec3(0.0f,0.0f,EPSILON),&input[0], &input[3], &input[6],&size,&dzp);
-    CubeSDF(p - ray::vec3(0.0f,0.0f,EPSILON),&input[0], &input[3], &input[6],&size,&dzn);
+    ray::vec3 pzp = p +  ray::vec3(0.0f,0.0f,EPSILON);
+    ray::vec3 pzn = p -  ray::vec3(0.0f,0.0f,EPSILON);
+
+    CubeSDF(pxp,&input[0], &input[3], &input[6],&size,&dxp);
+    CubeSDF(pxn,&input[0], &input[3], &input[6],&size,&dxn);
+
+    CubeSDF(pyp,&input[0], &input[3], &input[6],&size,&dyp);
+    CubeSDF(pyn,&input[0], &input[3], &input[6], &size,&dyn);
+
+    CubeSDF(pzp,&input[0], &input[3], &input[6],&size,&dzp);
+    CubeSDF(pzn,&input[0], &input[3], &input[6],&size,&dzn);
 
 
     *out = ray::normalize(ray::vec3(dxp-dxn, dyp-dyn, dzp-dzn) );
 }
 
 __device__ __host__
-void Sphere::SphereSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
+void Sphere::SphereSDF(const ray::vec3& p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
                        const float radius, size_t *size, float *out) {
 
     if (size != nullptr) *size = 1;
-    out[0]=ray::length(p-loc) - radius;
+    out[0]=ray::length(ray::ApplyTransform(p,loc,rot)) - radius;
     //printf("%f\n", out[0]);
 }
 
@@ -103,21 +112,29 @@ __device__ __host__
 void Sphere::SphereSDFF(const ray::vec3& p,const float *input, size_t *size, float *out) {
 
     //printf("LOC: (%f,%f,%f), ROT: (%f,%f,%f), SCALE:(%f,%f,%f), RAD: %f \n", input[0], input[1], input[2], input[3], input[4], input[5], input[6], input[7], input[8], input[9]);
-
     SphereSDF(p, &input[0], &input[3], &input[6], input[9], size, out);
 }
 __device__ __host__
 void Sphere::SphereSDFFNorm(const ray::vec3 &p, const float *input, ray::vec3 *out) {
     size_t size =0;
     float dxp,dxn,dyp,dyn,dzp,dzn;
-    SphereSDF(p + ray::vec3(EPSILON,0.0f,0.0f),&input[0], &input[3], &input[6], input[9],&size,&dxp);
-    SphereSDF(p - ray::vec3(EPSILON,0.0f,0.0f),&input[0], &input[3], &input[6], input[9],&size,&dxn);
+    ray::vec3 pxp = p + ray::vec3(EPSILON,0.0f,0.0f);
+    ray::vec3 pxn = p - ray::vec3(EPSILON,0.0f,0.0f);
 
-    SphereSDF(p + ray::vec3(0.0f,EPSILON,0.0f),&input[0], &input[3], &input[6], input[9],&size,&dyp);
-    SphereSDF(p - ray::vec3(0.0f,EPSILON,0.0f),&input[0], &input[3], &input[6], input[9],&size,&dyn);
+    ray::vec3 pyp = p + ray::vec3(0.0f,EPSILON,0.0f);
+    ray::vec3 pyn = p - ray::vec3(0.0f,EPSILON,0.0f);
 
-    SphereSDF(p + ray::vec3(0.0f,0.0f,EPSILON),&input[0], &input[3], &input[6], input[9],&size,&dzp);
-    SphereSDF(p - ray::vec3(0.0f,0.0f,EPSILON),&input[0], &input[3], &input[6], input[9],&size,&dzn);
+    ray::vec3 pzp = p +  ray::vec3(0.0f,0.0f,EPSILON);
+    ray::vec3 pzn = p -  ray::vec3(0.0f,0.0f,EPSILON);
+
+    SphereSDF(pxp,&input[0], &input[3], &input[6], input[9],&size,&dxp);
+    SphereSDF(pxn,&input[0], &input[3], &input[6], input[9],&size,&dxn);
+
+    SphereSDF(pyp,&input[0], &input[3], &input[6], input[9],&size,&dyp);
+    SphereSDF(pyn,&input[0], &input[3], &input[6], input[9],&size,&dyn);
+
+    SphereSDF(pzp,&input[0], &input[3], &input[6], input[9],&size,&dzp);
+    SphereSDF(pzn,&input[0], &input[3], &input[6], input[9],&size,&dzn);
 
 
     *out = ray::normalize(ray::vec3(dxp-dxn, dyp-dyn, dzp-dzn) );
@@ -125,16 +142,16 @@ void Sphere::SphereSDFFNorm(const ray::vec3 &p, const float *input, ray::vec3 *o
 }
 
 __device__ __host__
-void Mandelbulb::MandelbulbSDF(const ray::vec3 &p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
+void Mandelbulb::MandelbulbSDF(const ray::vec3& p, const ray::vec3 &loc, const ray::vec3 &rot, const ray::vec3 &scale,
                                const unsigned int iterations, const float exponent, size_t *size, float *out) {
-    ray::vec3 pnew =
-        ray::rotate(ray::rotate(ray::rotate( (p - loc),0,rot.x * (PI/180.f)),1,rot.y * (PI/180.f)),2,rot.z * (PI/180.f));
+
+
+    ray::vec3 pnew = ray::ApplyTransform(p,loc,rot);
     ray::vec3 zold(0.f,0.f,0.f);
     ray::vec3 znew(0.f,0.f,0.f);
 
     float dr = 1.0f;
     for (unsigned int i = 0; i < iterations; i++) {
-
         if (ray::length(zold) > 8.f) {
             break;
         }
@@ -157,14 +174,23 @@ void Mandelbulb::MandelbulbSDFF(const ray::vec3& p,const float *input, size_t *s
 void Mandelbulb::MandelbulbSDFFNorm(const ray::vec3 &p, const float *input, ray::vec3 *out) {
     size_t size = 0;
     float dxp,dxn,dyp,dyn,dzp,dzn;
-    MandelbulbSDF(p + ray::vec3(EPSILON,0.0f,0.0f), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dxp);
-    MandelbulbSDF(p - ray::vec3(EPSILON,0.0f,0.0f), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dxn);
+    ray::vec3 pxp = p + ray::vec3(EPSILON,0.0f,0.0f);
+    ray::vec3 pxn = p - ray::vec3(EPSILON,0.0f,0.0f);
 
-    MandelbulbSDF(p + ray::vec3(0.0f,EPSILON,0.0f), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dyp);
-    MandelbulbSDF(p - ray::vec3(0.0f,EPSILON,0.0f), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dyn);
+    ray::vec3 pyp = p + ray::vec3(0.0f,EPSILON,0.0f);
+    ray::vec3 pyn = p - ray::vec3(0.0f,EPSILON,0.0f);
 
-    MandelbulbSDF(p + ray::vec3(0.0f,0.0f,EPSILON), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dzp);
-    MandelbulbSDF(p - ray::vec3(0.0f,0.0f,EPSILON), &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dzn);
+    ray::vec3 pzp = p +  ray::vec3(0.0f,0.0f,EPSILON);
+    ray::vec3 pzn = p -  ray::vec3(0.0f,0.0f,EPSILON);
+
+    MandelbulbSDF(pxp, &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dxp);
+    MandelbulbSDF(pxn, &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dxn);
+
+    MandelbulbSDF(pyp, &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dyp);
+    MandelbulbSDF(pyn, &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dyn);
+
+    MandelbulbSDF(pzp, &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dzp);
+    MandelbulbSDF(pzn, &input[0], &input[3], &input[6],(unsigned int)input[9], input[10], &size,&dzn);
 
 
     *out = ray::normalize(ray::vec3(dxp-dxn, dyp-dyn, dzp-dzn) );
@@ -318,31 +344,41 @@ void Line::setB(const ray::vec3 &_b) {
     b = _b;
 }
 __device__ __host__
-void Line::LineSDF(const ray::vec3 &p, const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale,
+void Line::LineSDF(const ray::vec3& p, const ray::vec3 &_loc, const ray::vec3 &_rot, const ray::vec3 &_scale,
     const ray::vec3 &_a, const ray::vec3 &_b, const float _radius,size_t* size, float* out) {
-    ray::vec3 pa = p - _a;
+    ray::vec3 pa = ray::ApplyTransform(p,_loc,_rot) - _a;
     ray::vec3 ba = _b - _a;
     float h = ray::clamp( ray::dot(pa,ba)/ray::dot(ba,ba), 0.0, 1.0 );
     out[0] = ray::length( pa - ba*h ) - _radius;
     *size=1;
 
 }
-
-void Line::LineSDFF(const ray::vec3 &p, const float *input, size_t *size, float *out) {
+__device__ __host__
+void Line::LineSDFF(const ray::vec3& p, const float *input, size_t *size, float *out) {
     LineSDF(p,&input[0],&input[3],&input[6],&input[9],&input[12],input[15],size,out);
 }
-
+__device__ __host__
 void Line::LineSDFFNorm(const ray::vec3 &p, const float *input, ray::vec3 *out) {
     size_t size = 0;
     float dxp,dxn,dyp,dyn,dzp,dzn;
-    LineSDF(p + ray::vec3(EPSILON,0.0f,0.0f),&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dxp);
-    LineSDF(p - ray::vec3(EPSILON,0.0f,0.0f),&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dxn);
 
-    LineSDF(p + ray::vec3(0.0f,EPSILON,0.0f),&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dyp);
-    LineSDF(p - ray::vec3(0.0f,EPSILON,0.0f),&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dyn);
+    ray::vec3 pxp = p + ray::vec3(EPSILON,0.0f,0.0f);
+    ray::vec3 pxn = p - ray::vec3(EPSILON,0.0f,0.0f);
 
-    LineSDF(p + ray::vec3(0.0f,0.0f,EPSILON),&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dzp);
-    LineSDF(p - ray::vec3(0.0f,0.0f,EPSILON),&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dzn);
+    ray::vec3 pyp = p + ray::vec3(0.0f,EPSILON,0.0f);
+    ray::vec3 pyn = p - ray::vec3(0.0f,EPSILON,0.0f);
+
+    ray::vec3 pzp = p +  ray::vec3(0.0f,0.0f,EPSILON);
+    ray::vec3 pzn = p -  ray::vec3(0.0f,0.0f,EPSILON);
+
+    LineSDF(pxp,&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dxp);
+    LineSDF(pxn,&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dxn);
+
+    LineSDF(pyp,&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dyp);
+    LineSDF(pyn,&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dyn);
+
+    LineSDF(pzp,&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dzp);
+    LineSDF(pzn,&input[0],&input[3],&input[6],&input[9],&input[12],input[13], &size,&dzn);
 
     *out = ray::normalize(ray::vec3(dxp-dxn, dyp-dyn, dzp-dzn) );
 }

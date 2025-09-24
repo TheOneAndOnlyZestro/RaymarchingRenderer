@@ -115,17 +115,17 @@ class Sphere : public Primitive {
     
     Sphere(float id,const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale, const float _radius);
 
-    virtual PrimitiveType getType() const override;
+    PrimitiveType getType() const override;
 
     //Accessor Functions
-    virtual void getData(float* out, size_t* size) const override;
-    virtual size_t getSize() const override;
+    void getData(float* out, size_t* size) const override;
+    size_t getSize() const override;
 
-    virtual float getRadius() const;
+    float getRadius() const;
     
-    virtual float* getRadiusRef();
+    float* getRadiusRef();
     
-    virtual void setRadius(const float _radius);
+    void setRadius(const float _radius);
 
     __device__ __host__
     static void SphereSDF(const ray::vec3& p,
@@ -146,7 +146,7 @@ public:
     
     Cube(float id,const ray::vec3& _loc,const ray::vec3& _rot,const ray::vec3& _scale);
 
-    virtual PrimitiveType getType() const override;
+    PrimitiveType getType() const override;
 
     __device__ __host__
     static void CubeSDF(const ray::vec3& p,
@@ -173,23 +173,23 @@ public:
 
     //Accessor Functions
     
-    virtual unsigned int getIterations() const;
+    unsigned int getIterations() const;
     
-    virtual unsigned int* getIterationsRef();
+    unsigned int* getIterationsRef();
     
-    virtual void setIterations(const unsigned int _iterations);
+    void setIterations(const unsigned int _iterations);
 
-    virtual void getData(float* out, size_t* size) const override;
-    virtual size_t getSize() const override;
+    void getData(float* out, size_t* size) const override;
+    size_t getSize() const override;
 
-    virtual PrimitiveType getType() const override;
+    PrimitiveType getType() const override;
 
     
-    virtual float getExponent() const;
+    float getExponent() const;
     
-    virtual float* getExponentRef();
+    float* getExponentRef();
     
-    virtual void setExponent(const float _exponent);
+    void setExponent(const float _exponent);
 
     __device__ __host__
     static void MandelbulbSDF(const ray::vec3& p,
@@ -255,7 +255,7 @@ public:
 class Union : public BinaryOperator {
     public:
     Union(float id,const std::shared_ptr<Primitive>& _p1,const std::shared_ptr<Primitive>& _p2);
-    virtual PrimitiveType getType() const override;
+    PrimitiveType getType() const override;
 
     __device__ __host__
     static void UnionSDFF(const float d1, const float d2, size_t *size, float *out);
@@ -268,7 +268,7 @@ class Intersect : public BinaryOperator {
 public:
     __device__ __host__
     Intersect(float id,const std::shared_ptr<Primitive>& _p1,const std::shared_ptr<Primitive>& _p2);
-    virtual PrimitiveType getType() const override;
+    PrimitiveType getType() const override;
 
     __device__ __host__
     static void IntersectSDFF(const float d1, const float d2, size_t *size, float *out);

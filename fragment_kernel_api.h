@@ -22,6 +22,8 @@ void toDevice(float* output_host, PrimitiveType* output_disc_host,float* output_
 void AllocateLightSource(ray::vec3** LightSourceDevice);
 void UpdateDeviceLightSource(const ray::vec3* lightSource, ray::vec3* LightSourceDevice);
 void FreeDeviceLightSource(ray::vec3* LightSourceDevice);
+
+
 #endif
 
 

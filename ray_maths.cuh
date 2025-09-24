@@ -34,6 +34,7 @@ namespace ray {
 
     __device__ __host__
     inline explicit operator float*() { return v; }
+
 };
 
 
@@ -155,6 +156,8 @@ struct vec3 {
         inline explicit operator vec4() {
             return vec4(x,y,z,1.f);
         }
+
+
     };
 
     __device__ __host__
@@ -266,34 +269,21 @@ struct vec3 {
         return ray::vec3(ro * sinf(phi) * cosf(theta), ro * sinf(phi) * sinf(theta), ro * cosf(phi));
 
     }
-
-    __device__ __host__ inline ray::vec3 rotate(const ray::vec3& v,const int axis,const float angle) {
-        float c = cosf(angle), s = sinf(angle);
-        switch (axis) {
-            case 0: // rotate around +X (affects y,z)
-                return ray::vec3(
-                    v.x,
-                    c*v.y - s*v.z,
-                    s*v.y + c*v.z
-                );
-            case 1: // rotate around +Y (affects x,z)  NOTE the sign pattern
-                return ray::vec3(
-                    c*v.x + s*v.z,
-                    v.y,
-                   -s*v.x + c*v.z
-                );
-            case 2: // rotate around +Z (affects x,y)
-                return ray::vec3(
-                    c*v.x - s*v.y,
-                    s*v.x + c*v.y,
-                    v.z
-                );
-            default:
-                return ray::vec3();
-        }
+    __device__ __host__ inline ray::vec3 clamp(const ray::vec3& v, float min, float max) {
+        return {clamp(v.x, min, max), clamp(v.y, min, max), clamp(v.z, min, max)};
     }
 
-
+    __device__ __host__ inline ray::vec3 reflect(const ray::vec3& incident, const ray::vec3& normal) {
+        return incident -(2* normal * ray::dot(normal, incident));
+    }
+__device__ __host__
+inline ray::vec3 toVec3(const ray::vec4& v) {
+        return {v.x, v.y, v.z};
+}
+__device__ __host__
+inline ray::vec4 toVec4(const ray::vec3& v) {
+        return {v.x, v.y, v.z, 1.0f};
+    }
 struct mat4x4 {
         union {
             struct {
@@ -311,6 +301,7 @@ struct mat4x4 {
         inline mat4x4(const float* d) {
             memcpy_s(v, sizeof(float) * 16, d, sizeof(float) * 16);
         }
+        __device__ __host__
         inline mat4x4(const ray::vec4& v1, const ray::vec4& v2,const ray::vec4& v3, const vec4& v4, bool isRow = true)
          {
             if (isRow) {
@@ -376,17 +367,22 @@ struct mat4x4 {
     }
 
     __device__ __host__
-    inline mat4x4 rotate(const ray::vec3& value) {
+    inline mat4x4 rotationMat(const ray::vec3& value) {
         const float ca = cosf(value.x); const float sa = sinf(value.x);
         const float cb = cosf(value.y); const float sb = sinf(value.y);
         const float cg = cosf(value.z); const float sg = sinf(value.z);
 
         return {
-            ray::vec4(ca * cb, (ca * sb * sg) - (sa * cg),(ca * sb * sg) + (sa * sg), 0.f),
-            ray::vec4(sa * cb, (sa * sb * sg) + (ca * cg),(sa * sb * sg) - (ca * sg), 0.f),
+            ray::vec4(ca * cb, (ca * sb * sg) - (sa * cg),(ca * sb * cg) + (sa * sg), 0.f),
+            ray::vec4(sa * cb, (sa * sb * sg) + (ca * cg),(sa * sb * cg) - (ca * sg), 0.f),
             ray::vec4(-sb, cb*sg, cb * cg, 0.f),
             ray::vec4(0.f,0.f,0.f,1.f)
         };
+    }
+
+    __device__ __host__
+    inline vec3 ApplyTransform(const ray::vec3& v, const ray::vec3& loc, const ray::vec3& rot) {
+        return ray::toVec3(ray::dot(ray::rotationMat((rot) * (PI/180)) , ray::toVec4(v - loc)));
     }
 
 }
