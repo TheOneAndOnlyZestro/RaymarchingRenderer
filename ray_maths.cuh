@@ -191,7 +191,7 @@ struct vec3 {
 
     __device__ __host__
     inline vec3 normalize(const vec3& v1) {
-        return v1 / length(v1);
+        return v1 / (length(v1) + (EPSILON * 0.01f));
     }
 
     __device__ __host__

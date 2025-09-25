@@ -206,42 +206,131 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
         if (abs(data) < 0.001f || t > 1000.0f) { break;}
         t+=data;
     }
-    float diffuse = 0.f;
-    float intensity = 0.75f;
-    const float epsilon = 0.0001f;
+    float specularPower = 32.0f;
+    float intensity = 0.7f;
     float ambient = 0.3f;
-    float edge = 0.0f;
+    float reflection_intensity = 0.2f;
+
+    float diffuse = 0.f;
     float rim = 0.f;
     float mask = 0.0f;
     float specularity = 0.0f;
-    float specularPower = 8.0f;
-    if (data < 0.01f) {
-        mask =1.f;
-        parseExpressionNormAll(p, output, output_disc, &normal, dValues, output_size ,outputDiscSize);
-        //we hit a surface, calculate its normal
-        //calculate dot product between normal and a light source
-        ray::vec3 incident = ray::normalize(*lightSource - p);
-        diffuse = ray::dot(incident, normal ) * intensity;
+    ray::vec3 fcolor;
+    ray::vec3 baseColor(0.0f,0.0f,0.0f);
+    ray::vec3 ambientColor(1.0f,1.0f,1.0f);
 
-        ray::vec3 viewing = ray::normalize(p - ro);
-        specularity =  powf( max(ray::dot(viewing, ray::reflect(incident, normal)),0.f), specularPower);
+    if (minIndex == 0 && minD < 0.01f) {
+        fcolor = ray::vec3(1.f,1.f,1.f);
+    }else {
+        if (data < 0.01f) {
+            switch (minIndex) {
+                case 0:
+                    baseColor = ray::vec3(1.0f, 1.0f, 1.0f);
+                    break;
+                case 1: // cyan
+                    baseColor = ray::vec3(0.0f, 1.0f, 1.0f);
+                    break;
+                case 2: // green
+                    baseColor = ray::vec3(0.0f, 1.0f, 0.0f);
+                    break;
+                case 3: // magenta
+                    baseColor = ray::vec3(1.0f, 0.0f, 1.0f);
+                    break;
+                case 4: // orange
+                    baseColor = ray::vec3(1.0f, 0.5f, 0.0f);
+                    break;
+                case 5: // blue
+                    baseColor = ray::vec3(0.0f, 0.0f, 1.0f);
+                    break;
+                case 6: // pink
+                    baseColor = ray::vec3(1.0f, 0.4f, 0.7f);
+                    break;
+                case 7: // purple
+                    baseColor = ray::vec3(0.6f, 0.2f, 0.8f);
+                    break;
+                default:
+                    baseColor = ray::vec3(1.0f, 1.0f, 1.0f);
+                    break;
+            }
+            mask =1.f;
+            parseExpressionNormAll(p, output, output_disc, &normal, dValues, output_size ,outputDiscSize);
+            //we hit a surface, calculate its normal
+            //calculate dot product between normal and a light source
+            ray::vec3 incident = ray::normalize(*lightSource - p);
+            diffuse = ray::dot(incident, normal ) * intensity;
 
-        edge = (i/(float)MAX_STEPS);
-        edge = edge * edge * 0.7f;
+            ray::vec3 viewing = ray::normalize(p - ro);
+            ray::vec3 reflected = ray::reflect(incident, normal);
+            specularity =  powf( max(ray::dot(viewing, reflected),0.f), specularPower);
+            rim = pow(1.0f - max(ray::dot(normal, viewing), 0.0f), 32.0f);
+            fcolor =  (mask * ray::vec3(1.f,1.f,1.f) * baseColor * (diffuse + specularity + ambient + (rim * -0.01f)) );
 
+            ray::vec3 new_ro = p;
+            float new_t = 0.01f;
+            reflected = reflected * -1.f;
+            //let's try adding actual reflections
+            for (unsigned int i =0; i < 300; i++) {
+                p = new_ro + (reflected * new_t);
+                parseExpression(p,output, output_disc, &data, dValues,output_size ,outputDiscSize, &minD, &minIndex);
+                if (new_t > 100.0f) { break;}
+                new_t+=data;
+            }
+             float reflected_diffuse = 0.f;
+             float reflected_specularity = 0.f;
 
-        rim = pow(1.0f - max(ray::dot(normal, viewing), 0.0f), 2.0f);
+                 mask =1.f;
+                 parseExpressionNormAll(p, output, output_disc, &normal, dValues, output_size ,outputDiscSize);
+                 //we hit a surface, calculate its normal
+                 //calculate dot product between normal and a light source
+                 incident = ray::normalize(*lightSource - p);
+                 reflected_diffuse = ray::dot(incident, normal) * intensity;
 
+                 viewing = ray::normalize(p - new_ro);
+                 reflected = ray::reflect(incident, normal);
+                 reflected_specularity =  powf( max(ray::dot(viewing, reflected),0.f), specularPower) * intensity;
+
+                 switch (minIndex) {
+                     case 0: // bright yello fo rlight
+                         baseColor = ray::vec3(1.0f, 1.0f, 1.0f);
+                         break;
+                     case 1: // cyan
+                         baseColor = ray::vec3(0.0f, 1.0f, 1.0f);
+                         break;
+                     case 2: // green
+                         baseColor = ray::vec3(0.0f, 1.0f, 0.0f);
+                         break;
+                     case 3: // magenta
+                         baseColor = ray::vec3(1.0f, 0.0f, 1.0f);
+                         break;
+                     case 4: // orange
+                         baseColor = ray::vec3(1.0f, 0.5f, 0.0f);
+                         break;
+                     case 5: // blue
+                         baseColor = ray::vec3(0.0f, 0.0f, 1.0f);
+                         break;
+                     case 6: // pink
+                         baseColor = ray::vec3(1.0f, 0.4f, 0.7f);
+                         break;
+                     case 7: // purple
+                         baseColor = ray::vec3(0.6f, 0.2f, 0.8f);
+                         break;
+                     default:
+                         baseColor = ray::vec3(1.0f, 1.0f, 1.0f);
+                         break;
+                 }
+            ray::vec3 reflected_img = (mask * ray::vec3(1.f,1.f,1.f) * baseColor * (ambient + reflected_specularity + reflected_diffuse) );
+            //fcolor = ray::clamp(fcolor, 0.0f, 1.0f);
+            fcolor = ray::clamp( ((1-reflection_intensity)* fcolor) + (reflection_intensity * reflected_img)  , 0.0f,1.f);
+
+            //edge = (i/(float)MAX_STEPS);
+            //edge = edge * edge * 0.7f;
+            ;
+
+        }else {
+            fcolor = ambient * ambientColor;
+        }
     }
     float val =  ray::clamp(t * 0.2f + (i /(float)MAX_STEPS), 0.f, 1.f);
-
-    ray::vec3 fcolor;
-
-    ray::vec3 base_color(1.0f,1.0f,1.0f);
-    fcolor =  ray::clamp( (base_color * (diffuse + specularity) * mask) + ambient, 0.0f,1.f);
-
-    //Do red material for mesh with id 0
-    fcolor = minIndex == 0 && minD <0.01f ? ray::vec3(1.f,1.f,0.f) : fcolor;
     //fcolor = color * diffuse;
     ray::vec3 debug(val,val,val);
     //fcolor = debug;
