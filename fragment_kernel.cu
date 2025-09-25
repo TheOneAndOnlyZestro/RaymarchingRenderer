@@ -209,8 +209,9 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
     float specularPower = 32.0f;
     float intensity = 0.7f;
     float ambient = 0.3f;
-    float reflection_intensity = 0.2f;
-
+    float reflection_intensity = 2.f;
+    float IOR = 1.5f;
+    float specularIntensity = 3.f;
     float diffuse = 0.f;
     float rim = 0.f;
     float mask = 0.0f;
@@ -262,7 +263,7 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
             ray::vec3 viewing = ray::normalize(p - ro);
             ray::vec3 reflected = ray::reflect(incident, normal);
             specularity =  powf( max(ray::dot(viewing, reflected),0.f), specularPower);
-            rim = pow(1.0f - max(ray::dot(normal, viewing), 0.0f), 32.0f);
+            rim = pow(1.0f - max(ray::dot(normal, viewing), 0.0f), 16.0f) * specularIntensity;
             fcolor =  (mask * ray::vec3(1.f,1.f,1.f) * baseColor * (diffuse + specularity + ambient + (rim * -0.01f)) );
 
             ray::vec3 new_ro = p;
@@ -279,15 +280,16 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
              float reflected_specularity = 0.f;
 
                  mask =1.f;
-                 parseExpressionNormAll(p, output, output_disc, &normal, dValues, output_size ,outputDiscSize);
+                 ray::vec3 new_normal;
+                 parseExpressionNormAll(p, output, output_disc, &new_normal, dValues, output_size ,outputDiscSize);
                  //we hit a surface, calculate its normal
                  //calculate dot product between normal and a light source
                  incident = ray::normalize(*lightSource - p);
-                 reflected_diffuse = ray::dot(incident, normal) * intensity;
+                 reflected_diffuse = ray::dot(incident, new_normal) * intensity;
 
-                 viewing = ray::normalize(p - new_ro);
-                 reflected = ray::reflect(incident, normal);
-                 reflected_specularity =  powf( max(ray::dot(viewing, reflected),0.f), specularPower) * intensity;
+                 ray::vec3 reflected_viewing = ray::normalize(p - new_ro);
+                 reflected = ray::reflect(incident, new_normal);
+                 reflected_specularity =  powf( max(ray::dot(reflected_viewing, reflected),0.f), specularPower) * intensity;
 
                  switch (minIndex) {
                      case 0: // bright yello fo rlight
@@ -320,7 +322,9 @@ void FragmentKernel(cudaSurfaceObject_t surf,unsigned int width, unsigned int he
                  }
             ray::vec3 reflected_img = (mask * ray::vec3(1.f,1.f,1.f) * baseColor * (ambient + reflected_specularity + reflected_diffuse) );
             //fcolor = ray::clamp(fcolor, 0.0f, 1.0f);
-            fcolor = ray::clamp( ((1-reflection_intensity)* fcolor) + (reflection_intensity * reflected_img)  , 0.0f,1.f);
+            float r0 = ((1.f-IOR)/(1.f+IOR)) * ((1.f-IOR)/(1.f+IOR));
+            float fresnel = r0 + (1.f-r0) * powf((1.f - ray::dot(viewing, normal * -1.f)),5.f);
+            fcolor = ray::clamp( ((1.f-fresnel)* fcolor) + (fresnel * reflection_intensity * reflected_img)  , 0.0f,1.f);
 
             //edge = (i/(float)MAX_STEPS);
             //edge = edge * edge * 0.7f;

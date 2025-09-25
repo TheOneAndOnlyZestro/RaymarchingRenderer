@@ -63,7 +63,7 @@ void Cube::CubeSDF(const ray::vec3& p, const ray::vec3 &loc, const ray::vec3 &ro
 
     if (size != nullptr) *size = 1;
     ray::vec3 q(abs( ray::ApplyTransform(p,loc,rot)) - scale);
-    out[0] = ray::length(ray::max(q, 0.f)) + min( ray::compMax(q) , 0.0);
+    out[0] = ray::length(ray::max(q, 0.f)) + min( ray::compMax(q) , 0.0) - 0.01f;
 }
 __device__ __host__
 void Cube::CubeSDFF(const ray::vec3& p, const float *input, size_t *size, float *out) {
