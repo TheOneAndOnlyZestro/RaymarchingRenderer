@@ -5,7 +5,7 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
-#include "ray_flatten_to_CUDA.cuh"
+#include "ray_flatten_to_CUDA.h"
 const float default_verts[] = {
     -1.f, -1.f, 0.f,    0.f,0.f,
     1.f, -1.f, 0.f,     1.f,0.f,
@@ -51,19 +51,19 @@ const unsigned int height = 900;
 
 static unsigned int ID_Counter = 0;
 void addObject(std::shared_ptr<Primitive>* scene, std::vector<float>* output,
-    std::vector<PrimitiveType>* outputDesc, float** output_device, PrimitiveType** output_disc_device,
-    const std::vector<std::shared_ptr<Primitive>>& scene_objects, const PrimitiveType& type = PrimitiveType::UNION) {
+    std::vector<PrimitiveUtils::PrimitiveType>* outputDesc, float** output_device, PrimitiveUtils::PrimitiveType** output_disc_device,
+    const std::vector<std::shared_ptr<Primitive>>& scene_objects, const PrimitiveUtils::PrimitiveType& type = PrimitiveUtils::PrimitiveType::UNION) {
 
-    assert(type == PrimitiveType::UNION || type == PrimitiveType::INTERSECT);
+    assert(type == PrimitiveUtils::PrimitiveType::UNION || type == PrimitiveUtils::PrimitiveType::INTERSECT);
     if (*scene == nullptr) {
-        if (type == PrimitiveType::UNION) {
+        if (type == PrimitiveUtils::PrimitiveType::UNION) {
         *scene = std::make_shared<Union>(ID_Counter++,scene_objects[0], scene_objects[1]);
         }else {
             *scene = std::make_shared<Intersect>(ID_Counter++,scene_objects[0], scene_objects[1]);
         }
     }else {
         std::shared_ptr<Primitive> tempScene = *scene;
-        if (type == PrimitiveType::UNION) {
+        if (type == PrimitiveUtils::PrimitiveType::UNION) {
             *scene = std::make_shared<Union>(ID_Counter++,tempScene, scene_objects[scene_objects.size()-1]);
         }else {
             *scene = std::make_shared<Intersect>(ID_Counter++,tempScene, scene_objects[scene_objects.size()-1]);
@@ -170,11 +170,11 @@ int main() {
     scene_objects.push_back(light);
 
     std::vector<float> output;
-    std::vector<PrimitiveType> outputDesc;
+    std::vector<PrimitiveUtils::PrimitiveType> outputDesc;
     ray::flatten(light, &output,&outputDesc);
 
     float* output_device;
-    PrimitiveType* output_disc_device;
+    PrimitiveUtils::PrimitiveType* output_disc_device;
     Allocate(&output_device, &output_disc_device, output.size(), outputDesc.size());
 
     toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
@@ -209,7 +209,7 @@ int main() {
                     continue;
                 }
                 switch (scene_objects[i]->getType()) {
-                    case PrimitiveType::CUBE:
+                    case PrimitiveUtils::PrimitiveType::CUBE:
                         ImGui::Text("Cube");
                         if (
                         ImGui::DragFloat3(("Position##" +std::to_string(i)).c_str(), scene_objects[i]->getLocRef()->v,0.05f,-5.0f,5.0f) ||
@@ -221,7 +221,7 @@ int main() {
                             toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
                         }
                         break;
-                    case PrimitiveType::SPHERE:
+                    case PrimitiveUtils::PrimitiveType::SPHERE:
 
                         ImGui::Text("Sphere");
                         if (
@@ -235,7 +235,7 @@ int main() {
                             toDevice(output.data(), outputDesc.data(), output_device, output_disc_device, output.size(), outputDesc.size());
                         }
                         break;
-                    case PrimitiveType::MANDELBROT:
+                    case PrimitiveUtils::PrimitiveType::MANDELBROT:
                         ImGui::Text("Mandelbulb");
                         if (
                         ImGui::DragFloat3(("Position##"+std::to_string(i)).c_str(), scene_objects[i]->getLocRef()->v,0.05f,-5.0f,5.0f)||
@@ -249,7 +249,7 @@ int main() {
                         }
                         break;
 
-                    case PrimitiveType::LINE:
+                    case PrimitiveUtils::PrimitiveType::LINE:
                         ImGui::Text("Line");
                         if (
                         ImGui::DragFloat3(("Position##"+std::to_string(i)).c_str(), scene_objects[i]->getLocRef()->v,0.05f,-5.0f,5.0f)||
@@ -272,23 +272,20 @@ int main() {
             ImGui::Checkbox("Intersect", &intersect);
             if (ImGui::Button("Add Cube")) {
                 scene_objects.push_back(std::make_shared<Cube>(ID_Counter++,ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f)));
-                addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveType::INTERSECT: PrimitiveType::UNION);
-                for (int i =0; i < output.size(); i++) {
-                    printf("output[%d] = %f ", i, output[i]);
-                }
+                addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveUtils::PrimitiveType::INTERSECT: PrimitiveUtils::PrimitiveType::UNION);
             }
             if (ImGui::Button("Add Sphere")) {
                 scene_objects.push_back(std::make_shared<Sphere>(ID_Counter++,ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f), 0.5f));
-                addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveType::INTERSECT: PrimitiveType::UNION);
+                addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveUtils::PrimitiveType::INTERSECT: PrimitiveUtils::PrimitiveType::UNION);
             }
             if (ImGui::Button("Add Mandelbulb")) {
                 scene_objects.push_back(std::make_shared<Mandelbulb>(ID_Counter++,ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f), 8, 8.f));
-                addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveType::INTERSECT: PrimitiveType::UNION);
+                addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveUtils::PrimitiveType::INTERSECT: PrimitiveUtils::PrimitiveType::UNION);
             }
             if (ImGui::Button("Add Line")) {
                 scene_objects.push_back(std::make_shared<Line>(ID_Counter++,ray::vec3(0.f,0.f,-3.3f), ray::vec3(), ray::vec3(0.5f,0.5f,0.5f),
                     ray::vec3(-0.5,0.f, -3.3f), ray::vec3(0.5,0.f, -3.3f), 0.2f) );
-                addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveType::INTERSECT: PrimitiveType::UNION);
+                addObject( &scene, &output, &outputDesc, &output_device, &output_disc_device, scene_objects, intersect ? PrimitiveUtils::PrimitiveType::INTERSECT: PrimitiveUtils::PrimitiveType::UNION);
             }
             ImGui::End();
         }

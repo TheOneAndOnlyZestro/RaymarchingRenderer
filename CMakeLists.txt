@@ -28,8 +28,6 @@
         add_executable(RaymarchingCUDA
                 main.cpp
                 fragment_kernel.cu
-                stb_image.h
-                stb_image_write.h
                 ray_maths.cuh
                 ray_FFT.cuh
                 stbi_impl.cpp
@@ -39,11 +37,12 @@
                 ${IMGUI_ROOT}/src/imgui_widgets.cpp
                 ${IMGUI_ROOT}/src/imgui_impl_glfw.cpp
                 ${IMGUI_ROOT}/src/imgui_impl_opengl3.cpp
-                Primitive.cu
-                Primitive.cuh
-                ray_flatten_to_CUDA.cu
-                ray_flatten_to_CUDA.cuh
+                Primitive.cpp
+                ray_flatten_to_CUDA.cpp
                 ray_Stack.cuh
+                Material.cuh
+                PrimitiveDevice.cuh
+                PrimitiveUtils.cuh
         )
 
 

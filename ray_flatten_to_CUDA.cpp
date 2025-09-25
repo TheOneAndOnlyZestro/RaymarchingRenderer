@@ -1,7 +1,7 @@
-#include "ray_flatten_to_CUDA.cuh"
+#include "ray_flatten_to_CUDA.h"
 
 __host__
-void ray::flatten(const std::shared_ptr<Primitive>& object, std::vector<float>* out, std::vector<PrimitiveType>* outDesc) {
+void ray::flatten(const std::shared_ptr<Primitive>& object, std::vector<float>* out, std::vector<PrimitiveUtils::PrimitiveType>* outDesc) {
     //Recursive step
     if (!object->isOperator()) {
         //We reached an anchor

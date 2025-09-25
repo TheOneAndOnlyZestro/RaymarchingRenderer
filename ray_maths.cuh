@@ -11,6 +11,7 @@
 #ifndef EPSILON
 #define EPSILON 1.e-6
 #endif
+
 //This section deals with vec3 structures and there corresponding functions
 namespace ray {
     struct vec3;
